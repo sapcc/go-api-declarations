@@ -22,7 +22,7 @@ package limes
 import (
 	"testing"
 
-	th "github.com/gophercloud/gophercloud/testhelper"
+	th "github.com/sapcc/go-api-declarations/internal/testhelper"
 )
 
 var quotas = QuotaRequest{
