@@ -15,6 +15,10 @@ endif
 default: FORCE
 	@echo 'There is nothing to build, use `make check` for running the tests'
 
+GO_BUILDFLAGS =
+GO_LDFLAGS =
+GO_TESTENV =
+
 # which packages to test with "go test"
 GO_TESTPKGS := $(shell go list -f '{{if or .TestGoFiles .XTestGoFiles}}{{.ImportPath}}{{end}}' ./...)
 # which packages to measure coverage for
