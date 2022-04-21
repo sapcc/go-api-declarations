@@ -23,7 +23,7 @@ GO_COVERPKGS := $(shell go list ./...)
 space := $(null) $(null)
 comma := ,
 
-check: FORCE static-check
+check: FORCE static-check build/cover.html
 	@printf "\e[1;32m>> All checks successful.\e[0m\n"
 
 prepare-static-check: FORCE
