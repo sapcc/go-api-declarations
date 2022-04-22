@@ -17,6 +17,10 @@
 *
 *******************************************************************************/
 
+// Package cadf provides data structures for working with CADF events as per the CADF spec.
+//
+// SAP CCloud developers wishing to publish audit events to Hermes are advised
+// to use the github.com/sapcc/go-bits/audittools package.
 package cadf
 
 import (
@@ -41,10 +45,10 @@ type Event struct {
 	EventType string `json:"eventType"`
 
 	// CADF action mapping for GET call on an OpenStack REST API
-	Action string `json:"action"`
+	Action Action `json:"action"`
 
 	// Outcome of REST API call, eg. success/failure
-	Outcome string `json:"outcome"`
+	Outcome Outcome `json:"outcome"`
 
 	// Standard response for successful HTTP requests
 	Reason Reason `json:"reason,omitempty"`

@@ -20,97 +20,83 @@
 package cadf
 
 import (
+	"net/http"
 	"strings"
 )
 
+var validTypeURIs = []string{"storage", "compute", "network", "data", "service"}
+
 // IsTypeURI that matches CADF Taxonomy. Full CADF Taxonomy
 // available in the documentation. Match Prefix
-func IsTypeURI(TypeURI string) bool {
-	validTypeURIs := []string{"storage", "compute", "network", "data", "service"}
-
+func IsTypeURI(uri string) bool {
 	for _, tu := range validTypeURIs {
-		if strings.HasPrefix(TypeURI, tu) {
+		if strings.HasPrefix(uri, tu) {
 			return true
 		}
 	}
 	return false
 }
 
-//IsAction validates a CADF Action: Exact match
-func IsAction(Action string) bool {
-	validActions := []string{
-		"backup",
-		"capture",
-		"create",
-		"configure",
-		"read",
-		"list",
-		"update",
-		"delete",
-		"monitor",
-		"start",
-		"stop",
-		"deploy",
-		"undeploy",
-		"enable",
-		"disable",
-		"send",
-		"receive",
-		"authenticate",
-		"authenticate/login",
-		"revoke",
-		"renew",
-		"restore",
-		"evaluate",
-		"allow",
-		"deny",
-		"notify",
-		"unknown",
-	}
+// Action enumerates valid values for CADF actions.
+type Action string
 
-	for _, a := range validActions {
-		if Action == a {
-			return true
-		}
-	}
-	return false
-}
+const (
+	BackupAction       Action = "backup"
+	CaptureAction      Action = "capture"
+	CreateAction       Action = "create"
+	ConfigureAction    Action = "configure"
+	ReadAction         Action = "read"
+	ListAction         Action = "list"
+	UpdateAction       Action = "update"
+	DeleteAction       Action = "delete"
+	MonitorAction      Action = "monitor"
+	StartAction        Action = "start"
+	StopAction         Action = "stop"
+	DeployAction       Action = "deploy"
+	UndeployAction     Action = "undeploy"
+	EnableAction       Action = "enable"
+	DisableAction      Action = "disable"
+	SendAction         Action = "send"
+	ReceiveAction      Action = "receive"
+	AuthenticateAction Action = "authenticate"
+	LoginAction        Action = "authenticate/login"
+	RevokeAction       Action = "revoke"
+	RenewAction        Action = "renew"
+	RestoreAction      Action = "restore"
+	EvaluateAction     Action = "evaluate"
+	AllowAction        Action = "allow"
+	DenyAction         Action = "deny"
+	NotifyAction       Action = "notify"
+	UnknownAction      Action = "unknown"
+)
 
-//IsOutcome CADF Outcome: Exact Match
-func IsOutcome(outcome string) bool {
-	validOutcomes := []string{
-		"success",
-		"failure",
-		"pending",
-	}
+// Outcome enumerates valid values for CADF outcomes.
+type Outcome string
 
-	for _, o := range validOutcomes {
-		if outcome == o {
-			return true
-		}
-	}
-	return false
-}
+const (
+	SuccessOutcome Outcome = "success"
+	FailureOutcome Outcome = "failure"
+	PendingOutcome Outcome = "pending"
+)
 
-//GetAction returns the Action for each http request method.
-func GetAction(req string) (action string) {
-	switch req {
-	case "get":
-		action = "read"
-	case "head":
-		action = "read"
-	case "post":
-		action = "create"
-	case "put":
-		action = "update"
-	case "delete":
-		action = "delete"
-	case "patch":
-		action = "update"
-	case "options":
-		action = "read"
+// GetAction returns the corresponding Action for a HTTP request method.
+func GetAction(method string) Action {
+	switch strings.ToUpper(method) {
+	case http.MethodGet:
+		return ReadAction
+	case http.MethodHead:
+		return ReadAction
+	case http.MethodPost:
+		return CreateAction
+	case http.MethodPut:
+		return UpdateAction
+	case http.MethodDelete:
+		return DeleteAction
+	case http.MethodPatch:
+		return UpdateAction
+	case http.MethodOptions:
+		return ReadAction
 	default:
-		action = "unknown"
+		return UnknownAction
 	}
-	return action
 }
