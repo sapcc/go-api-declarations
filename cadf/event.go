@@ -23,9 +23,7 @@
 // to use the github.com/sapcc/go-bits/audittools package.
 package cadf
 
-import (
-	"time"
-)
+import "time"
 
 // Event contains the CADF event according to CADF spec, section 6.6.1 Event (data)
 // Extensions: requestPath (OpenStack, IBM), initiator.project_id/domain_id
@@ -39,7 +37,7 @@ type Event struct {
 	ID string `json:"id"`
 
 	// CADF generated timestamp
-	EventTime string `json:"eventTime"`
+	EventTime time.Time `json:"eventTime"`
 
 	// Characterizes events: eg. activity
 	EventType string `json:"eventType"`
@@ -124,20 +122,4 @@ type Attachment struct {
 	// In practise we have to decide because otherwise ES does based one first value
 	// An interface allows arrays of json content. This should be json in the content.
 	Content interface{} `json:"content"`
-}
-
-// Timestamp for proper CADF format
-type Timestamp struct {
-	time.Time
-}
-
-// MarshalJSON for cadf format time
-func (t Timestamp) MarshalJSON() ([]byte, error) {
-	return []byte(t.Format(`"2006-01-02T15:04:05.999Z"`)), nil
-}
-
-// UnmarshalJSON for cadf format time
-func (t *Timestamp) UnmarshalJSON(data []byte) (err error) {
-	t.Time, err = time.Parse(`"2006-01-02T15:04:05.999Z"`, string(data))
-	return
 }
