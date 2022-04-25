@@ -118,8 +118,11 @@ type Attachment struct {
 	// Using typeURI would surely be more consistent. OpenStack uses typeURI, IBM supports both
 	// (but forgot the name property)
 	TypeURI string `json:"typeURI"`
-	// Content contains the payload of the attachment. In theory this means any type.
-	// In practise we have to decide because otherwise ES does based one first value
-	// An interface allows arrays of json content. This should be json in the content.
-	Content interface{} `json:"content"`
+	// Content contains the payload of the attachment.
+	// In theory this can be any type, i.e. `any` or `interface{}`.
+	// In practice, however, we have to decide on a specific type because otherwise
+	// Elasticsearch will decide for us based on the underlying type of the first event's
+	// Content field and this can break things if consequent events don't have the same
+	// underlying type for Content.
+	Content string `json:"content"`
 }
