@@ -1,5 +1,7 @@
 # go-api-declarations
 
+[![CI](https://github.com/sapcc/go-api-declarations/actions/workflows/ci.yaml/badge.svg)](https://github.com/sapcc/go-api-declarations/actions/workflows/ci.yaml)
+
 This Go module contains reusable declarations for types appearing in our APIs.
 This repository is designed to have as little dependencies as possible and
 contain as little application logic as possible. Also, by using versioned tags,
