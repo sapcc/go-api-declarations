@@ -24,19 +24,6 @@ import (
 	"strings"
 )
 
-var validTypeURIs = []string{"storage", "compute", "network", "data", "service"}
-
-// IsTypeURI that matches CADF Taxonomy. Full CADF Taxonomy
-// available in the documentation. Match Prefix
-func IsTypeURI(uri string) bool {
-	for _, tu := range validTypeURIs {
-		if strings.HasPrefix(uri, tu) {
-			return true
-		}
-	}
-	return false
-}
-
 // Action enumerates valid values for CADF actions.
 type Action string
 

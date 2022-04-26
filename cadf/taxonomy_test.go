@@ -22,29 +22,6 @@ package cadf
 import "testing"
 
 //nolint:dupl
-func TestIsTypeURI(t *testing.T) {
-	type args struct {
-		TypeURI string
-	}
-	tests := []struct {
-		name string
-		args args
-		want bool
-	}{
-		{"test1", args{TypeURI: "storage"}, true},
-		{"test2", args{TypeURI: "storage/data"}, true},
-		{"test3", args{TypeURI: "unknown"}, false},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := IsTypeURI(tt.args.TypeURI); got != tt.want {
-				t.Errorf("IsTypeURI() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-//nolint:dupl
 func TestGetAction(t *testing.T) {
 	type args struct {
 		req string
