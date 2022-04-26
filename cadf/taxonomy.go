@@ -24,7 +24,8 @@ import (
 	"strings"
 )
 
-// Action enumerates valid values for CADF actions.
+// Action enumerates some of the valid values for CADF actions.
+// Note that this list is not complete and there are other action types that are also valid.
 type Action string
 
 const (
