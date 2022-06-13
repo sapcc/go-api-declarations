@@ -1,3 +1,3 @@
 module github.com/sapcc/go-api-declarations
 
-go 1.17
+go 1.18
