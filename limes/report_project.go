@@ -29,6 +29,7 @@ type ProjectReport struct {
 	UUID       string                `json:"id"`
 	Name       string                `json:"name"`
 	ParentUUID string                `json:"parent_id"`
+	Tags       []string              `json:"tags,omitempty"`
 	Bursting   *ProjectBurstingInfo  `json:"bursting,omitempty"`
 	Services   ProjectServiceReports `json:"services"`
 }
