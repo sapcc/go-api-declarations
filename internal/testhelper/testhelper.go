@@ -17,8 +17,8 @@
 *
 *******************************************************************************/
 
-//Package testhelper reimplements parts of github.com/gophercloud/gophercloud/testhelper
-//to avoid a Gophercloud dependency in this module.
+// Package testhelper reimplements parts of github.com/gophercloud/gophercloud/testhelper
+// to avoid a Gophercloud dependency in this module.
 package testhelper
 
 import (
