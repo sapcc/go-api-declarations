@@ -81,7 +81,7 @@ func (u *Unit) UnmarshalYAML(unmarshal func(interface{}) error) error {
 // Base returns the base unit of this unit. For units defined as a multiple of
 // another unit, that unit is the base unit. Otherwise, the same unit and a
 // multiple of 1 is returned.
-func (u Unit) Base() (Unit, uint64) {
+func (u Unit) Base() (Unit, uint64) { //nolint:gocritic // not necessary to name the results
 	switch u {
 	case UnitKibibytes:
 		return UnitBytes, 1 << 10
