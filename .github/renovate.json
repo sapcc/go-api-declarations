@@ -23,6 +23,12 @@
       "allowedVersions": "1.19.x"
     },
     {
+      "matchPackagePatterns": [
+        ".*"
+      ],
+      "groupName": "all"
+    },
+    {
       "matchDepTypes": [
         "action",
         "dockerfile"
@@ -31,5 +37,8 @@
     }
   ],
   "prHourlyLimit": 0,
+  "schedule": [
+    "before 8am on Friday"
+  ],
   "semanticCommits": "disabled"
 }
