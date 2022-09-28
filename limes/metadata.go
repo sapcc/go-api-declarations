@@ -34,9 +34,6 @@ type ResourceInfo struct {
 	//the first time, a backend quota equal to this value will be approved
 	//automatically (i.e. Quota will be set equal to BackendQuota).
 	AutoApproveInitialQuota uint64 `json:"-"`
-	//If ExternallyManaged is true, quota cannot be set via the API. The quota
-	//value reported by the QuotaPlugin is always authoritative.
-	ExternallyManaged bool `json:"externally_managed,omitempty"`
 	//If NoQuota is true, quota is not tracked at all for this resource. The
 	//resource will only report usage. This field is not shown in API responses.
 	//Check `res.Quota == nil` instead.
