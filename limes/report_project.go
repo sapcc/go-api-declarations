@@ -21,7 +21,6 @@ package limes
 
 import (
 	"encoding/json"
-	"sort"
 )
 
 // ProjectReport contains all data about resource usage in a project.
@@ -85,99 +84,10 @@ type ProjectRateLimitReport struct {
 // to JSON as a list.
 type ProjectServiceReports map[string]*ProjectServiceReport
 
-// MarshalJSON implements the json.Marshaler interface.
-func (s ProjectServiceReports) MarshalJSON() ([]byte, error) {
-	//serialize with ordered keys to ensure testcase stability
-	types := make([]string, 0, len(s))
-	for typeStr := range s {
-		types = append(types, typeStr)
-	}
-	sort.Strings(types)
-	list := make([]*ProjectServiceReport, len(s))
-	for idx, typeStr := range types {
-		list[idx] = s[typeStr]
-	}
-	return json.Marshal(list)
-}
-
-// UnmarshalJSON implements the json.Unmarshaler interface
-func (s *ProjectServiceReports) UnmarshalJSON(b []byte) error {
-	tmp := make([]*ProjectServiceReport, 0)
-	err := json.Unmarshal(b, &tmp)
-	if err != nil {
-		return err
-	}
-	t := make(ProjectServiceReports)
-	for _, ps := range tmp {
-		t[ps.Type] = ps
-	}
-	*s = t
-	return nil
-}
-
 // ProjectResourceReports provides fast lookup of resources using a map, but serializes
 // to JSON as a list.
 type ProjectResourceReports map[string]*ProjectResourceReport
 
-// MarshalJSON implements the json.Marshaler interface.
-func (r ProjectResourceReports) MarshalJSON() ([]byte, error) {
-	//serialize with ordered keys to ensure testcase stability
-	names := make([]string, 0, len(r))
-	for name := range r {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-	list := make([]*ProjectResourceReport, len(r))
-	for idx, name := range names {
-		list[idx] = r[name]
-	}
-	return json.Marshal(list)
-}
-
-// UnmarshalJSON implements the json.Unmarshaler interface
-func (r *ProjectResourceReports) UnmarshalJSON(b []byte) error {
-	tmp := make([]*ProjectResourceReport, 0)
-	err := json.Unmarshal(b, &tmp)
-	if err != nil {
-		return err
-	}
-	t := make(ProjectResourceReports)
-	for _, pr := range tmp {
-		t[pr.Name] = pr
-	}
-	*r = t
-	return nil
-}
-
 // ProjectRateLimitReports provides fast lookup of resources using a map, but serializes
 // to JSON as a list.
 type ProjectRateLimitReports map[string]*ProjectRateLimitReport
-
-// MarshalJSON implements the json.Marshaler interface.
-func (r ProjectRateLimitReports) MarshalJSON() ([]byte, error) {
-	names := make([]string, 0, len(r))
-	for name := range r {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-	list := make([]*ProjectRateLimitReport, len(r))
-	for idx, name := range names {
-		list[idx] = r[name]
-	}
-	return json.Marshal(list)
-}
-
-// UnmarshalJSON implements the json.Unmarshaler interface.
-func (r *ProjectRateLimitReports) UnmarshalJSON(b []byte) error {
-	tmp := make([]*ProjectRateLimitReport, 0)
-	err := json.Unmarshal(b, &tmp)
-	if err != nil {
-		return err
-	}
-	t := make(ProjectRateLimitReports)
-	for _, prl := range tmp {
-		t[prl.Name] = prl
-	}
-	*r = t
-	return nil
-}

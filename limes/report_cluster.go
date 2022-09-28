@@ -21,7 +21,6 @@ package limes
 
 import (
 	"encoding/json"
-	"sort"
 )
 
 // ClusterReport contains aggregated data about resource usage in a cluster.
@@ -80,133 +79,14 @@ type ClusterRateLimitReport struct {
 // serializes to JSON as a list.
 type ClusterServiceReports map[string]*ClusterServiceReport
 
-// MarshalJSON implements the json.Marshaler interface.
-func (s ClusterServiceReports) MarshalJSON() ([]byte, error) {
-	//serialize with ordered keys to ensure testcase stability
-	types := make([]string, 0, len(s))
-	for typeStr := range s {
-		types = append(types, typeStr)
-	}
-	sort.Strings(types)
-	list := make([]*ClusterServiceReport, len(s))
-	for idx, typeStr := range types {
-		list[idx] = s[typeStr]
-	}
-	return json.Marshal(list)
-}
-
-// UnmarshalJSON implements the json.Unmarshaler interface
-func (s *ClusterServiceReports) UnmarshalJSON(b []byte) error {
-	tmp := make([]*ClusterServiceReport, 0)
-	err := json.Unmarshal(b, &tmp)
-	if err != nil {
-		return err
-	}
-	t := make(ClusterServiceReports)
-	for _, cs := range tmp {
-		t[cs.Type] = cs
-	}
-	*s = t
-	return nil
-}
-
 // ClusterResourceReports provides fast lookup of resources by resource name,
 // but serializes to JSON as a list.
 type ClusterResourceReports map[string]*ClusterResourceReport
-
-// MarshalJSON implements the json.Marshaler interface.
-func (r ClusterResourceReports) MarshalJSON() ([]byte, error) {
-	//serialize with ordered keys to ensure testcase stability
-	names := make([]string, 0, len(r))
-	for name := range r {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-	list := make([]*ClusterResourceReport, len(r))
-	for idx, name := range names {
-		list[idx] = r[name]
-	}
-	return json.Marshal(list)
-}
-
-// UnmarshalJSON implements the json.Unmarshaler interface
-func (r *ClusterResourceReports) UnmarshalJSON(b []byte) error {
-	tmp := make([]*ClusterResourceReport, 0)
-	err := json.Unmarshal(b, &tmp)
-	if err != nil {
-		return err
-	}
-	t := make(ClusterResourceReports)
-	for _, cr := range tmp {
-		t[cr.Name] = cr
-	}
-	*r = t
-	return nil
-}
 
 // ClusterAvailabilityZoneReports provides fast lookup of availability zones
 // using a map, but serializes to JSON as a list.
 type ClusterAvailabilityZoneReports map[string]*ClusterAvailabilityZoneReport
 
-// MarshalJSON implements the json.Marshaler interface.
-func (r ClusterAvailabilityZoneReports) MarshalJSON() ([]byte, error) {
-	//serialize with ordered keys to ensure testcase stability
-	names := make([]string, 0, len(r))
-	for name := range r {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-	list := make([]*ClusterAvailabilityZoneReport, len(r))
-	for idx, name := range names {
-		list[idx] = r[name]
-	}
-	return json.Marshal(list)
-}
-
-// UnmarshalJSON implements the json.Unmarshaler interface
-func (r *ClusterAvailabilityZoneReports) UnmarshalJSON(b []byte) error {
-	tmp := make([]*ClusterAvailabilityZoneReport, 0)
-	err := json.Unmarshal(b, &tmp)
-	if err != nil {
-		return err
-	}
-	t := make(ClusterAvailabilityZoneReports)
-	for _, cr := range tmp {
-		t[cr.Name] = cr
-	}
-	*r = t
-	return nil
-}
-
 // ClusterRateLimitReports provides fast lookup of global rate limits using a map, but serializes
 // to JSON as a list.
 type ClusterRateLimitReports map[string]*ClusterRateLimitReport
-
-// MarshalJSON implements the json.Marshaler interface.
-func (r ClusterRateLimitReports) MarshalJSON() ([]byte, error) {
-	names := make([]string, 0, len(r))
-	for name := range r {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-	list := make([]*ClusterRateLimitReport, len(r))
-	for idx, name := range names {
-		list[idx] = r[name]
-	}
-	return json.Marshal(list)
-}
-
-// UnmarshalJSON implements the json.Unmarshaler interface.
-func (r *ClusterRateLimitReports) UnmarshalJSON(b []byte) error {
-	tmp := make([]*ClusterRateLimitReport, 0)
-	err := json.Unmarshal(b, &tmp)
-	if err != nil {
-		return err
-	}
-	t := make(ClusterRateLimitReports)
-	for _, prl := range tmp {
-		t[prl.Name] = prl
-	}
-	*r = t
-	return nil
-}
