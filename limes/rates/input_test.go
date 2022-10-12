@@ -1,6 +1,6 @@
 /*******************************************************************************
 *
-* Copyright 2017 SAP SE
+* Copyright 2022 SAP SE
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@
 *
 *******************************************************************************/
 
-package limes
+package limesrates
 
 import (
 	"testing"
@@ -25,50 +25,10 @@ import (
 	th "github.com/sapcc/go-api-declarations/internal/testhelper"
 )
 
-var quotas = QuotaRequest{
-	"volumev2": ServiceQuotaRequest{
-		Resources: ResourceQuotaRequest{
-			"capacity": {
-				Value: 1024,
-				Unit:  UnitBytes,
-			},
-			"volumes": {
-				Value: 16,
-				Unit:  UnitNone,
-			},
-		},
-		Rates: map[string]RateLimitRequest{},
-	},
-}
-
-var quotaJSON = `
-	[
-		{
-			"type": "volumev2",
-			"resources": [
-				{
-					"name": "capacity",
-					"quota": 1024,
-					"unit": "B"
-				},
-				{
-					"name": "volumes",
-					"quota": 16,
-					"unit": ""
-				}
-			],
-			"rates": []
-		}
-	]
-`
-
-var rateLimits = QuotaRequest{
-	"object-store": ServiceQuotaRequest{
-		Rates: map[string]RateLimitRequest{
-			"object/account/container:create": {Limit: 1000, Window: 1 * WindowSeconds},
-			"object/account/container:delete": {Limit: 100, Window: 1 * WindowSeconds},
-		},
-		Resources: ResourceQuotaRequest{},
+var rateLimits = RateRequest{
+	"object-store": ServiceRequest{
+		"object/account/container:create": RateLimitRequest{Limit: 1000, Window: 1 * WindowSeconds},
+		"object/account/container:delete": RateLimitRequest{Limit: 100, Window: 1 * WindowSeconds},
 	},
 }
 
@@ -76,7 +36,6 @@ var rateLimitJSON = `
 	[
 		{
 			"type": "object-store",
-			"resources": [],
 			"rates": [
 				{
 					"name": "object/account/container:create",
@@ -93,23 +52,12 @@ var rateLimitJSON = `
 	]
 `
 
-func TestQuotaRequestMarshall(t *testing.T) {
-	th.CheckJSONEquals(t, quotaJSON, quotas)
-}
-
-func TestQuotaRequestUnmarshall(t *testing.T) {
-	actual := QuotaRequest{}
-	err := actual.UnmarshalJSON([]byte(quotaJSON))
-	th.AssertNoErr(t, err)
-	th.CheckDeepEquals(t, quotas, actual)
-}
-
-func TestQuotaRateLimitMarshall(t *testing.T) {
+func TestQuotaRateLimitMarshal(t *testing.T) {
 	th.CheckJSONEquals(t, rateLimitJSON, rateLimits)
 }
 
-func TestRateLimitRequestUnmarshall(t *testing.T) {
-	actual := QuotaRequest{}
+func TestRateLimitRequestUnmarshal(t *testing.T) {
+	var actual RateRequest
 	err := actual.UnmarshalJSON([]byte(rateLimitJSON))
 	th.AssertNoErr(t, err)
 	th.CheckDeepEquals(t, rateLimits, actual)

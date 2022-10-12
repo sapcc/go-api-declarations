@@ -12,12 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package limes
+package limesresources
 
 import (
 	"testing"
 
 	th "github.com/sapcc/go-api-declarations/internal/testhelper"
+	"github.com/sapcc/go-api-declarations/limes"
 )
 
 var domainServicesMockJSON = `
@@ -76,7 +77,7 @@ var domainMockResources = &DomainResourceReports{
 	"ram": &DomainResourceReport{
 		ResourceInfo: ResourceInfo{
 			Name: "ram",
-			Unit: UnitMebibytes,
+			Unit: limes.UnitMebibytes,
 		},
 		DomainQuota:   p2u64(20480),
 		ProjectsQuota: p2u64(10240),
@@ -86,7 +87,7 @@ var domainMockResources = &DomainResourceReports{
 
 var domainMockServices = &DomainServiceReports{
 	"compute": &DomainServiceReport{
-		ServiceInfo: ServiceInfo{
+		ServiceInfo: limes.ServiceInfo{
 			Type: "compute",
 			Area: "compute",
 		},

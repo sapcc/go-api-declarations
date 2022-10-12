@@ -12,12 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package limes
+package limesresources
 
 import (
 	"testing"
 
 	th "github.com/sapcc/go-api-declarations/internal/testhelper"
+	"github.com/sapcc/go-api-declarations/limes"
 )
 
 var clusterServicesMockJSON = `
@@ -88,23 +89,6 @@ var clusterResourcesMockJSON = `
 	]
 `
 
-var clusterServicesOnlyRatesMockJSON = `
-	[
-		{
-			"type": "compute",
-			"area": "compute",
-			"resources": [],
-			"rates": [
-				{
-					"name": "service/shared/objects:create",
-					"limit": 5000,
-					"window": "1s"
-				}
-			]
-		}
-	]
-`
-
 var clusterMockResources = &ClusterResourceReports{
 	"cores": &ClusterResourceReport{
 		ResourceInfo: ResourceInfo{
@@ -129,7 +113,7 @@ var clusterMockResources = &ClusterResourceReports{
 	"ram": &ClusterResourceReport{
 		ResourceInfo: ResourceInfo{
 			Name: "ram",
-			Unit: UnitMebibytes,
+			Unit: limes.UnitMebibytes,
 		},
 		Capacity:     &ramCap,
 		DomainsQuota: p2u64(102400),
@@ -142,30 +126,13 @@ var ramCap uint64 = 204800
 
 var clusterMockServices = &ClusterServiceReports{
 	"compute": &ClusterServiceReport{
-		ServiceInfo: ServiceInfo{
+		ServiceInfo: limes.ServiceInfo{
 			Type: "compute",
 			Area: "compute",
 		},
 		Resources:    *clusterMockResources,
 		MaxScrapedAt: p2i64(1539024049),
 		MinScrapedAt: p2i64(1539023764),
-	},
-}
-
-var clusterServicesOnlyRates = &ClusterServiceReports{
-	"compute": &ClusterServiceReport{
-		ServiceInfo: ServiceInfo{
-			Type: "compute",
-			Area: "compute",
-		},
-		Resources: ClusterResourceReports{},
-		Rates: ClusterRateLimitReports{
-			"service/shared/objects:create": {
-				RateInfo: RateInfo{Name: "service/shared/objects:create"},
-				Limit:    5000,
-				Window:   1 * WindowSeconds,
-			},
-		},
 	},
 }
 
@@ -197,15 +164,4 @@ func TestClusterResourcesUnmarshal(t *testing.T) {
 	err := actual.UnmarshalJSON([]byte(clusterResourcesMockJSON))
 	th.AssertNoErr(t, err)
 	th.CheckDeepEquals(t, clusterMockResources, actual)
-}
-
-func TestClusterServicesOnlyRatesMarshal(t *testing.T) {
-	th.CheckJSONEquals(t, clusterServicesOnlyRatesMockJSON, clusterServicesOnlyRates)
-}
-
-func TestClusterServicesOnlyRatesUnmarshal(t *testing.T) {
-	actual := &ClusterServiceReports{}
-	err := actual.UnmarshalJSON([]byte(clusterServicesOnlyRatesMockJSON))
-	th.AssertNoErr(t, err)
-	th.CheckDeepEquals(t, clusterServicesOnlyRates, actual)
 }

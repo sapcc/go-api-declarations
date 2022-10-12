@@ -17,30 +17,23 @@
 *
 *******************************************************************************/
 
-package limes
+package limesresources
 
 import (
 	"github.com/sapcc/go-api-declarations/internal/marshal"
 )
 
 func (r ClusterAvailabilityZoneReports) MarshalJSON() ([]byte, error) { return marshal.MapAsList(r) }
-func (r ClusterRateLimitReports) MarshalJSON() ([]byte, error)        { return marshal.MapAsList(r) }
 func (r ClusterResourceReports) MarshalJSON() ([]byte, error)         { return marshal.MapAsList(r) }
 func (s ClusterServiceReports) MarshalJSON() ([]byte, error)          { return marshal.MapAsList(s) }
 func (r DomainResourceReports) MarshalJSON() ([]byte, error)          { return marshal.MapAsList(r) }
 func (s DomainServiceReports) MarshalJSON() ([]byte, error)           { return marshal.MapAsList(s) }
-func (r ProjectRateLimitReports) MarshalJSON() ([]byte, error)        { return marshal.MapAsList(r) }
 func (r ProjectResourceReports) MarshalJSON() ([]byte, error)         { return marshal.MapAsList(r) }
 func (s ProjectServiceReports) MarshalJSON() ([]byte, error)          { return marshal.MapAsList(s) }
 
 func (r *ClusterAvailabilityZoneReports) UnmarshalJSON(buf []byte) error {
 	m, err := marshal.MapFromList(buf, func(r *ClusterAvailabilityZoneReport) string { return r.Name })
 	*r = ClusterAvailabilityZoneReports(m)
-	return err
-}
-func (r *ClusterRateLimitReports) UnmarshalJSON(buf []byte) error {
-	m, err := marshal.MapFromList(buf, func(r *ClusterRateLimitReport) string { return r.Name })
-	*r = ClusterRateLimitReports(m)
 	return err
 }
 func (r *ClusterResourceReports) UnmarshalJSON(buf []byte) error {
@@ -61,11 +54,6 @@ func (r *DomainResourceReports) UnmarshalJSON(buf []byte) error {
 func (s *DomainServiceReports) UnmarshalJSON(buf []byte) error {
 	m, err := marshal.MapFromList(buf, func(s *DomainServiceReport) string { return s.Type })
 	*s = DomainServiceReports(m)
-	return err
-}
-func (r *ProjectRateLimitReports) UnmarshalJSON(buf []byte) error {
-	m, err := marshal.MapFromList(buf, func(r *ProjectRateLimitReport) string { return r.Name })
-	*r = ProjectRateLimitReports(m)
 	return err
 }
 func (r *ProjectResourceReports) UnmarshalJSON(buf []byte) error {

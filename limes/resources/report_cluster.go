@@ -17,16 +17,18 @@
 *
 *******************************************************************************/
 
-package limes
+package limesresources
 
 import (
 	"encoding/json"
+
+	"github.com/sapcc/go-api-declarations/limes"
 )
 
 // ClusterReport contains aggregated data about resource usage in a cluster.
 // It is returned by GET endpoints for clusters.
 type ClusterReport struct {
-	ID           string                `json:"id"`
+	limes.ClusterInfo
 	Services     ClusterServiceReports `json:"services"`
 	MaxScrapedAt *int64                `json:"max_scraped_at,omitempty"`
 	MinScrapedAt *int64                `json:"min_scraped_at,omitempty"`
@@ -35,13 +37,10 @@ type ClusterReport struct {
 // ClusterServiceReport is a substructure of ClusterReport containing data for
 // a single backend service.
 type ClusterServiceReport struct {
-	ServiceInfo
-	Resources         ClusterResourceReports  `json:"resources"`
-	Rates             ClusterRateLimitReports `json:"rates,omitempty"`
-	MaxScrapedAt      *int64                  `json:"max_scraped_at,omitempty"`
-	MinScrapedAt      *int64                  `json:"min_scraped_at,omitempty"`
-	MaxRatesScrapedAt *int64                  `json:"max_rates_scraped_at,omitempty"`
-	MinRatesScrapedAt *int64                  `json:"min_rates_scraped_at,omitempty"`
+	limes.ServiceInfo
+	Resources    ClusterResourceReports `json:"resources"`
+	MaxScrapedAt *int64                 `json:"max_scraped_at,omitempty"`
+	MinScrapedAt *int64                 `json:"min_scraped_at,omitempty"`
 }
 
 // ClusterResourceReport is a substructure of ClusterReport containing data for
@@ -68,13 +67,6 @@ type ClusterAvailabilityZoneReport struct {
 	Usage       uint64 `json:"usage,omitempty"`
 }
 
-// ClusterRateLimitReport is the structure for rate limits per target type URI and their rate limited actions.
-type ClusterRateLimitReport struct {
-	RateInfo
-	Limit  uint64 `json:"limit,omitempty"`
-	Window Window `json:"window,omitempty"`
-}
-
 // ClusterServiceReports provides fast lookup of services by service type, but
 // serializes to JSON as a list.
 type ClusterServiceReports map[string]*ClusterServiceReport
@@ -86,7 +78,3 @@ type ClusterResourceReports map[string]*ClusterResourceReport
 // ClusterAvailabilityZoneReports provides fast lookup of availability zones
 // using a map, but serializes to JSON as a list.
 type ClusterAvailabilityZoneReports map[string]*ClusterAvailabilityZoneReport
-
-// ClusterRateLimitReports provides fast lookup of global rate limits using a map, but serializes
-// to JSON as a list.
-type ClusterRateLimitReports map[string]*ClusterRateLimitReport

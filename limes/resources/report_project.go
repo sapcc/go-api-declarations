@@ -17,19 +17,19 @@
 *
 *******************************************************************************/
 
-package limes
+package limesresources
 
 import (
 	"encoding/json"
+
+	"github.com/sapcc/go-api-declarations/limes"
 )
 
 // ProjectReport contains all data about resource usage in a project.
 type ProjectReport struct {
-	UUID       string                `json:"id"`
-	Name       string                `json:"name"`
-	ParentUUID string                `json:"parent_id"`
-	Bursting   *ProjectBurstingInfo  `json:"bursting,omitempty"`
-	Services   ProjectServiceReports `json:"services"`
+	limes.ProjectInfo
+	Bursting *ProjectBurstingInfo  `json:"bursting,omitempty"`
+	Services ProjectServiceReports `json:"services"`
 }
 
 // ProjectBurstingInfo is a substructure of ProjectReport containing information about
@@ -43,11 +43,9 @@ type ProjectBurstingInfo struct {
 // ProjectServiceReport is a substructure of ProjectReport containing data for
 // a single backend service.
 type ProjectServiceReport struct {
-	ServiceInfo
-	Resources      ProjectResourceReports  `json:"resources"`
-	Rates          ProjectRateLimitReports `json:"rates,omitempty"`
-	ScrapedAt      *int64                  `json:"scraped_at,omitempty"`
-	RatesScrapedAt *int64                  `json:"rates_scraped_at,omitempty"`
+	limes.ServiceInfo
+	Resources ProjectResourceReports `json:"resources"`
+	ScrapedAt *int64                 `json:"scraped_at,omitempty"`
 }
 
 // ProjectResourceReport is a substructure of ProjectReport containing data for
@@ -68,18 +66,6 @@ type ProjectResourceReport struct {
 	Annotations map[string]interface{} `json:"annotations,omitempty"`
 }
 
-// ProjectRateLimitReport is the structure for rate limits per target type URI and their rate limited actions.
-type ProjectRateLimitReport struct {
-	RateInfo
-	//NOTE: Both Window fields must have pointer types because omitempty does not
-	//work directly on json.Marshaler-implementing types.
-	Limit         uint64  `json:"limit,omitempty"`
-	Window        *Window `json:"window,omitempty"`
-	DefaultLimit  uint64  `json:"default_limit,omitempty"`
-	DefaultWindow *Window `json:"default_window,omitempty"`
-	UsageAsBigint string  `json:"usage_as_bigint,omitempty"`
-}
-
 // ProjectServiceReports provides fast lookup of services using a map, but serializes
 // to JSON as a list.
 type ProjectServiceReports map[string]*ProjectServiceReport
@@ -87,7 +73,3 @@ type ProjectServiceReports map[string]*ProjectServiceReport
 // ProjectResourceReports provides fast lookup of resources using a map, but serializes
 // to JSON as a list.
 type ProjectResourceReports map[string]*ProjectResourceReport
-
-// ProjectRateLimitReports provides fast lookup of resources using a map, but serializes
-// to JSON as a list.
-type ProjectRateLimitReports map[string]*ProjectRateLimitReport

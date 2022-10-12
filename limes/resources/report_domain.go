@@ -17,25 +17,24 @@
 *
 *******************************************************************************/
 
-package limes
+package limesresources
+
+import "github.com/sapcc/go-api-declarations/limes"
 
 // DomainReport contains aggregated data about resource usage in a domain.
 // It is returned by GET requests on domains.
 type DomainReport struct {
-	UUID     string               `json:"id"`
-	Name     string               `json:"name"`
+	limes.DomainInfo
 	Services DomainServiceReports `json:"services"`
 }
 
 // DomainServiceReport is a substructure of DomainReport containing data for
 // a single backend service.
 type DomainServiceReport struct {
-	ServiceInfo
-	Resources         DomainResourceReports `json:"resources"`
-	MaxScrapedAt      *int64                `json:"max_scraped_at,omitempty"`
-	MinScrapedAt      *int64                `json:"min_scraped_at,omitempty"`
-	MaxRatesScrapedAt *int64                `json:"max_rates_scraped_at,omitempty"`
-	MinRatesScrapedAt *int64                `json:"min_rates_scraped_at,omitempty"`
+	limes.ServiceInfo
+	Resources    DomainResourceReports `json:"resources"`
+	MaxScrapedAt *int64                `json:"max_scraped_at,omitempty"`
+	MinScrapedAt *int64                `json:"min_scraped_at,omitempty"`
 }
 
 // DomainResourceReport is a substructure of DomainReport containing data for
