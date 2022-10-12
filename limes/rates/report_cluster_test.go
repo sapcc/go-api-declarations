@@ -58,10 +58,6 @@ var clusterServicesOnlyRates = &ClusterServiceReports{
 	},
 }
 
-func p2i64(val int64) *int64 {
-	return &val
-}
-
 func TestClusterServicesOnlyRatesMarshal(t *testing.T) {
 	th.CheckJSONEquals(t, clusterServicesOnlyRatesMockJSON, clusterServicesOnlyRates)
 }

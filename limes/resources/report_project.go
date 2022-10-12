@@ -45,7 +45,7 @@ type ProjectBurstingInfo struct {
 type ProjectServiceReport struct {
 	limes.ServiceInfo
 	Resources ProjectResourceReports `json:"resources"`
-	ScrapedAt *int64                 `json:"scraped_at,omitempty"`
+	ScrapedAt *limes.UnixEncodedTime `json:"scraped_at,omitempty"`
 }
 
 // ProjectResourceReport is a substructure of ProjectReport containing data for

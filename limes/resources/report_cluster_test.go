@@ -131,13 +131,9 @@ var clusterMockServices = &ClusterServiceReports{
 			Area: "compute",
 		},
 		Resources:    *clusterMockResources,
-		MaxScrapedAt: p2i64(1539024049),
-		MinScrapedAt: p2i64(1539023764),
+		MaxScrapedAt: p2time(1539024049),
+		MinScrapedAt: p2time(1539023764),
 	},
-}
-
-func p2i64(val int64) *int64 {
-	return &val
 }
 
 func p2u64(val uint64) *uint64 {

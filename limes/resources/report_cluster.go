@@ -29,9 +29,9 @@ import (
 // It is returned by GET endpoints for clusters.
 type ClusterReport struct {
 	limes.ClusterInfo
-	Services     ClusterServiceReports `json:"services"`
-	MaxScrapedAt *int64                `json:"max_scraped_at,omitempty"`
-	MinScrapedAt *int64                `json:"min_scraped_at,omitempty"`
+	Services     ClusterServiceReports  `json:"services"`
+	MaxScrapedAt *limes.UnixEncodedTime `json:"max_scraped_at,omitempty"`
+	MinScrapedAt *limes.UnixEncodedTime `json:"min_scraped_at,omitempty"`
 }
 
 // ClusterServiceReport is a substructure of ClusterReport containing data for
@@ -39,8 +39,8 @@ type ClusterReport struct {
 type ClusterServiceReport struct {
 	limes.ServiceInfo
 	Resources    ClusterResourceReports `json:"resources"`
-	MaxScrapedAt *int64                 `json:"max_scraped_at,omitempty"`
-	MinScrapedAt *int64                 `json:"min_scraped_at,omitempty"`
+	MaxScrapedAt *limes.UnixEncodedTime `json:"max_scraped_at,omitempty"`
+	MinScrapedAt *limes.UnixEncodedTime `json:"min_scraped_at,omitempty"`
 }
 
 // ClusterResourceReport is a substructure of ClusterReport containing data for

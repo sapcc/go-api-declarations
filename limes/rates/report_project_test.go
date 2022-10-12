@@ -21,6 +21,7 @@ package limesrates
 
 import (
 	"testing"
+	"time"
 
 	th "github.com/sapcc/go-api-declarations/internal/testhelper"
 	"github.com/sapcc/go-api-declarations/limes"
@@ -109,7 +110,7 @@ var projectMockServicesRateLimit = &ProjectServiceReports{
 				Window:   p2window(1 * WindowMinutes),
 			},
 		},
-		ScrapedAt: p2i64(22),
+		ScrapedAt: p2time(22),
 	},
 }
 
@@ -142,7 +143,7 @@ var projectMockServicesRateLimitDeviatingFromDefaults = &ProjectServiceReports{
 				DefaultWindow: p2window(1 * WindowMinutes),
 			},
 		},
-		ScrapedAt: p2i64(22),
+		ScrapedAt: p2time(22),
 	},
 }
 
@@ -166,6 +167,11 @@ func TestProjectServicesRateLimitDeviatingFromDefaultsUnmarshall(t *testing.T) {
 	err := actual.UnmarshalJSON([]byte(projectServicesRateLimitDeviatingFromDefaultsMockJSON))
 	th.AssertNoErr(t, err)
 	th.CheckDeepEquals(t, projectMockServicesRateLimitDeviatingFromDefaults, actual)
+}
+
+func p2time(timestamp int64) *limes.UnixEncodedTime {
+	t := limes.UnixEncodedTime{Time: time.Unix(timestamp, 0).UTC()}
+	return &t
 }
 
 func p2window(val Window) *Window {

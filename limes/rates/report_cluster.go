@@ -34,9 +34,9 @@ type ClusterReport struct {
 // a single backend service.
 type ClusterServiceReport struct {
 	limes.ServiceInfo
-	Rates        ClusterRateReports `json:"rates,omitempty"`
-	MaxScrapedAt *int64             `json:"max_scraped_at,omitempty"`
-	MinScrapedAt *int64             `json:"min_scraped_at,omitempty"`
+	Rates        ClusterRateReports     `json:"rates,omitempty"`
+	MaxScrapedAt *limes.UnixEncodedTime `json:"max_scraped_at,omitempty"`
+	MinScrapedAt *limes.UnixEncodedTime `json:"min_scraped_at,omitempty"`
 }
 
 // ClusterRateReport is a substructure of ClusterServiceReport containing data

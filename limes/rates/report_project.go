@@ -31,8 +31,8 @@ type ProjectReport struct {
 // a single backend service.
 type ProjectServiceReport struct {
 	limes.ServiceInfo
-	Rates     ProjectRateReports `json:"rates,omitempty"`
-	ScrapedAt *int64             `json:"scraped_at,omitempty"`
+	Rates     ProjectRateReports     `json:"rates,omitempty"`
+	ScrapedAt *limes.UnixEncodedTime `json:"scraped_at,omitempty"`
 }
 
 // ProjectRateReport is a substructure of ProjectServiceReport containing data

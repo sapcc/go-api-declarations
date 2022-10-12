@@ -32,9 +32,9 @@ type DomainReport struct {
 // a single backend service.
 type DomainServiceReport struct {
 	limes.ServiceInfo
-	Resources    DomainResourceReports `json:"resources"`
-	MaxScrapedAt *int64                `json:"max_scraped_at,omitempty"`
-	MinScrapedAt *int64                `json:"min_scraped_at,omitempty"`
+	Resources    DomainResourceReports  `json:"resources"`
+	MaxScrapedAt *limes.UnixEncodedTime `json:"max_scraped_at,omitempty"`
+	MinScrapedAt *limes.UnixEncodedTime `json:"min_scraped_at,omitempty"`
 }
 
 // DomainResourceReport is a substructure of DomainReport containing data for
