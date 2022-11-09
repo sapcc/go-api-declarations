@@ -60,6 +60,8 @@ type HelmRelease struct {
 	//ImageVersion is only set for releases that take an image version produced by an earlier pipeline job.
 	ImageVersion string `json:"image-version,omitempty"`
 	Namespace    string `json:"kubernetes-namespace"`
+	//DeployedImages is a list of all Docker image references that were found in the deployed Helm manifest.
+	DeployedImages []string `json:"deployed-images"`
 
 	//StartedAt is not set for OutcomeNotDeployed.
 	StartedAt *time.Time `json:"started-at"`
