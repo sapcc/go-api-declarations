@@ -29,10 +29,10 @@ import (
 
 // vendored minimal version of https://github.com/sapcc/go-bits/blob/master/assert/assert.go
 // to avoid cyclic dependency
-func deepEqual(t *testing.T, variable string, actual, expected interface{}) bool {
+func checkDeepEqual(t *testing.T, variable string, actual, expected interface{}) {
 	t.Helper()
 	if reflect.DeepEqual(actual, expected) {
-		return true
+		return
 	}
 
 	//NOTE: We HAVE TO use %#v here, even if it's verbose. Every other generic
@@ -45,8 +45,6 @@ func deepEqual(t *testing.T, variable string, actual, expected interface{}) bool
 	t.Error("assert.DeepEqual failed for " + variable)
 	t.Logf("\texpected = %#v\n", expected)
 	t.Logf("\t  actual = %#v\n", actual)
-
-	return false
 }
 
 func TestUsageValuesEncodingDecoding(t *testing.T) {
@@ -85,7 +83,7 @@ func TestUsageValuesEncodingDecoding(t *testing.T) {
 		//check encoding into SQL
 		actualSQLEncoding, err := tc.UsageValues.Value()
 		if err == nil {
-			deepEqual(t, indexed("SQLEncoding"), actualSQLEncoding, driver.Value(tc.SQLEncoding))
+			checkDeepEqual(t, indexed("SQLEncoding"), actualSQLEncoding, driver.Value(tc.SQLEncoding))
 		} else {
 			t.Errorf("SQL encoding of %#v failed: %v", tc.UsageValues, err.Error())
 		}
@@ -94,7 +92,7 @@ func TestUsageValuesEncodingDecoding(t *testing.T) {
 		var actualDecoded UsageValues
 		err = actualDecoded.Scan(tc.SQLEncoding)
 		if err == nil {
-			deepEqual(t, indexed("SQLDecoded"), actualDecoded, tc.UsageValues)
+			checkDeepEqual(t, indexed("SQLDecoded"), actualDecoded, tc.UsageValues)
 		} else {
 			t.Errorf("SQL decoding of %q failed: %v", tc.SQLEncoding, err.Error())
 		}
@@ -102,7 +100,7 @@ func TestUsageValuesEncodingDecoding(t *testing.T) {
 		//check encoding into JSON
 		actualJSONEncoding, err := json.Marshal(tc.UsageValues)
 		if err == nil {
-			deepEqual(t, indexed("JSONEncoding"), string(actualJSONEncoding), tc.JSONEncoding)
+			checkDeepEqual(t, indexed("JSONEncoding"), string(actualJSONEncoding), tc.JSONEncoding)
 		} else {
 			t.Errorf("JSON encoding of %#v failed: %v", tc.UsageValues, err.Error())
 		}
@@ -111,7 +109,7 @@ func TestUsageValuesEncodingDecoding(t *testing.T) {
 		actualDecoded = UsageValues{}
 		err = json.Unmarshal([]byte(tc.JSONEncoding), &actualDecoded)
 		if err == nil {
-			deepEqual(t, indexed("JSONDecoded"), actualDecoded, tc.UsageValues)
+			checkDeepEqual(t, indexed("JSONDecoded"), actualDecoded, tc.UsageValues)
 		} else {
 			t.Errorf("JSON decoding of %q failed: %v", tc.JSONEncoding, err.Error())
 		}
