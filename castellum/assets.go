@@ -14,7 +14,7 @@
 
 package castellum
 
-// Asset is how a db.Asset looks like in the API.
+// Asset is the API representation of an asset.
 type Asset struct {
 	UUID               string                 `json:"id"`
 	Size               uint64                 `json:"size,omitempty"`
@@ -30,15 +30,18 @@ type Checked struct {
 	ErrorMessage string `json:"error,omitempty"`
 }
 
-// StandaloneOperation is how a PendingOperation or FinishedOperation appears inside a type Asset in the API
+// StandaloneOperation is the API representation for a pending or finished
+// resize operation when the operation stands on its one or within a larger
+// list of operations.
 type StandaloneOperation struct {
 	Operation
-	ProjectUUID string    `json:"project_id,omitempty"`
-	AssetType   AssetType `json:"asset_type,omitempty"`
-	AssetID     string    `json:"asset_id,omitempty"`
+	ProjectUUID string `json:"project_id,omitempty"`
+	AssetType   string `json:"asset_type,omitempty"`
+	AssetID     string `json:"asset_id,omitempty"`
 }
 
-// Operation is how a PendingOperation or FinishedOperation looks like in the API.
+// StandaloneOperation is the API representation for a pending or finished
+// resize operation when the operation appears within its respective asset.
 type Operation struct {
 	State     OperationState         `json:"state"`
 	Reason    OperationReason        `json:"reason"`

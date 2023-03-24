@@ -20,10 +20,6 @@ import (
 	"fmt"
 )
 
-// AssetType is the type of Resource.AssetType. It extends type string with some
-// convenience methods.
-type AssetType string
-
 // OperationReason is an enumeration type for possible reasons for a resize operation.
 type OperationReason string
 
@@ -86,15 +82,6 @@ type UsageMetric string
 // SingularUsageMetric. By contrast, server group assets have two usage values
 // (for CPU and RAM usage, respectively), so SingularUsageMetric is not used.
 const SingularUsageMetric UsageMetric = "singular"
-
-// Identifier inserts the metric name into the given format string, but returns
-// the empty string for SingularUsageMetric.
-func (m UsageMetric) Identifier(format string) string {
-	if m == SingularUsageMetric {
-		return ""
-	}
-	return fmt.Sprintf(format, m)
-}
 
 // UsageValues contains all usage values for an asset at a particular point in time.
 type UsageValues map[UsageMetric]float64

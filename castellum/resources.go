@@ -16,9 +16,13 @@ package castellum
 
 import "encoding/json"
 
+// Resource is the API representation of a resource.
 type Resource struct {
-	Checked           *Checked         `json:"checked,omitempty"`
-	AssetCount        int64            `json:"asset_count"`
+	//fields that only appear in GET responses
+	Checked    *Checked `json:"checked,omitempty"`
+	AssetCount int64    `json:"asset_count"`
+
+	//fields that are also allowed in PUT requests
 	ConfigJSON        *json.RawMessage `json:"config,omitempty"`
 	LowThreshold      *Threshold       `json:"low_threshold,omitempty"`
 	HighThreshold     *Threshold       `json:"high_threshold,omitempty"`

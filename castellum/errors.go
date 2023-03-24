@@ -14,6 +14,7 @@
 
 package castellum
 
+// ResourceScrapeError is the API representation for a resource scrape error.
 type ResourceScrapeError struct {
 	ProjectUUID string  `json:"project_id,omitempty"`
 	DomainUUID  string  `json:"domain_id"`
@@ -21,7 +22,7 @@ type ResourceScrapeError struct {
 	Checked     Checked `json:"checked"`
 }
 
-// AssetScrapeError is how an asset's scrape error appears in API.
+// AssetScrapeError is the API representation for an asset scrape error.
 type AssetScrapeError struct {
 	AssetUUID   string   `json:"asset_id"`
 	ProjectUUID string   `json:"project_id,omitempty"`
@@ -30,7 +31,7 @@ type AssetScrapeError struct {
 	Checked     *Checked `json:"checked,omitempty"`
 }
 
-// AssetResizeError is how an asset's resize error appears in API.
+// AssetResizeError is the API representation for an asset resize error.
 type AssetResizeError struct {
 	AssetUUID   string           `json:"asset_id"`
 	ProjectUUID string           `json:"project_id,omitempty"`
