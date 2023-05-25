@@ -17,9 +17,9 @@
 *
 *******************************************************************************/
 
-// Package tensoevent contains data structures describing the event messages that
+// Package deployevent contains data structures describing the event messages that
 // our CI generates for deployments (i.e. "helm install" and "helm upgrade".
-package tensoevent
+package deployevent
 
 import (
 	"time"
@@ -34,8 +34,8 @@ type Event struct {
 	// Note one of the *Release Types MUST be set
 	HelmReleases []*HelmRelease `json:"helm-release,omitempty"`
 	// this should be tf-releases but is named release for consistency
-	TFReleases []*TFRelease `json:"tf-release,omitempty"`
-	Pipeline   Pipeline     `json:"pipeline"`
+	TerraformReleases []*TerraformRelease `json:"terraform-release,omitempty"`
+	Pipeline          Pipeline            `json:"pipeline"`
 }
 
 // GitRepo appears in type Event. It describes the state of a Git repository
@@ -48,17 +48,17 @@ type GitRepo struct {
 	RemoteURL   string     `json:"remote-url"`
 }
 
-// TFRelease appears in type Event. It describes a terraform run that was executed and it's outcome
-type TFRelease struct {
-	TFVersion       string          `json:"tf_version"`
-	TFChangeSummary TFChangeSummary `json:"tf_change_summary,omitempty"`
-	TFError         string          `json:"tf_error,omitempty"`
-	Outcome         Outcome         `json:"outcome"`
+// TerraformRelease appears in type Event. It describes a terraform run that was executed and it's outcome
+type TerraformRelease struct {
+	TerraformVersion       string                 `json:"terraform_version"`
+	TerraformChangeSummary TerraformChangeSummary `json:"terraform_change_summary,omitempty"`
+	TerraformError         string                 `json:"terraform_error,omitempty"`
+	Outcome                Outcome                `json:"outcome"`
 }
 
-// TFChangeSummary appears in TFRelease. It describes how many resources were added / destroyed or changed by
+// TerraformChangeSummary appears in TerraformRelease. It describes how many resources were added / destroyed or changed by
 // a terraform run
-type TFChangeSummary struct {
+type TerraformChangeSummary struct {
 	Add       int    `json:"add"`
 	Change    int    `json:"change"`
 	Remove    int    `json:"remove"`
@@ -90,7 +90,7 @@ type HelmRelease struct {
 	DurationSeconds *uint64    `json:"duration,omitempty"`
 }
 
-// Outcome appears in type HelmRelease and TFRelease. It describes the final state of a release.
+// Outcome appears in type HelmRelease and TerraformRelease. It describes the final state of a release.
 type Outcome string
 
 const (
@@ -99,8 +99,8 @@ const (
 	OutcomeNotDeployed Outcome = "not-deployed"
 	//OutcomeSucceeded describes a Helm release that succeeded.
 	OutcomeSucceeded Outcome = "succeeded"
-	//OutcomeFailed describes a failed release
-	OutcomeFailed Outcome = "failed"
+	//OutcomeTerraformRunFailed describes a terraform run that failed
+	OutcomeTerraformRunFailed Outcome = "terraform-run-failed"
 	//OutcomeHelmUpgradeFailed describes a Helm release that failed during
 	//`helm upgrade` or because some deployed pods did not come up correctly.
 	OutcomeHelmUpgradeFailed Outcome = "helm-upgrade-failed"
@@ -117,7 +117,7 @@ const (
 // Helm release.
 func (o Outcome) IsKnownInputValue() bool {
 	switch o {
-	case OutcomeNotDeployed, OutcomeSucceeded, OutcomeHelmUpgradeFailed, OutcomeE2ETestFailed:
+	case OutcomeNotDeployed, OutcomeSucceeded, OutcomeHelmUpgradeFailed, OutcomeE2ETestFailed, OutcomeTerraformRunFailed:
 		return true
 	case OutcomePartiallyDeployed:
 		return false //not acceptable on an individual release, can only appear as result of Event.CombinedOutcome()
@@ -144,7 +144,7 @@ func (event Event) CombinedOutcome() Outcome {
 	hasUndeployed := false
 	for _, hr := range event.HelmReleases {
 		switch hr.Outcome {
-		case OutcomeHelmUpgradeFailed, OutcomeE2ETestFailed, OutcomeFailed:
+		case OutcomeHelmUpgradeFailed, OutcomeE2ETestFailed, OutcomeTerraformRunFailed:
 			//specific failure forces the entire result to be that failure
 			return hr.Outcome
 		case OutcomeSucceeded:
