@@ -54,6 +54,9 @@ type TerraformRelease struct {
 	TerraformChangeSummary TerraformChangeSummary `json:"terraform_change_summary,omitempty"`
 	TerraformError         string                 `json:"terraform_error,omitempty"`
 	Outcome                Outcome                `json:"outcome"`
+	StartedAt              *time.Time             `json:"started_at"`
+	FinishedAt             *time.Time             `json:"finished_at"`
+	DurationSeconds        *uint64                `json:"duration_seconds"`
 }
 
 // TerraformChangeSummary appears in TerraformRelease. It describes how many resources were added / destroyed or changed by
