@@ -151,13 +151,21 @@ type Pipeline struct {
 // CombinedOutcome merges the Outcome values of all HelmReleases in this Event
 // into a single summary value.
 func (event Event) CombinedOutcome() Outcome {
+	allOutcomes := make([]Outcome, 0, len(event.HelmReleases)+len(event.TerraformRuns))
+	for _, hr := range event.HelmReleases {
+		allOutcomes = append(allOutcomes, hr.Outcome)
+	}
+	for _, tr := range event.TerraformRuns {
+		allOutcomes = append(allOutcomes, tr.Outcome)
+	}
+
 	hasSucceeded := false
 	hasUndeployed := false
-	for _, hr := range event.HelmReleases {
-		switch hr.Outcome {
+	for _, outcome := range allOutcomes {
+		switch outcome {
 		case OutcomeHelmUpgradeFailed, OutcomeE2ETestFailed, OutcomeTerraformRunFailed:
 			//specific failure forces the entire result to be that failure
-			return hr.Outcome
+			return outcome
 		case OutcomeSucceeded:
 			hasSucceeded = true
 		case OutcomeNotDeployed:
@@ -180,11 +188,13 @@ func (event Event) CombinedOutcome() Outcome {
 func (event Event) CombinedStartDate() *time.Time {
 	t := event.RecordedAt
 	for _, hr := range event.HelmReleases {
-		if hr.StartedAt == nil {
-			continue
-		}
-		if t.After(*hr.StartedAt) {
+		if hr.StartedAt != nil && t.After(*hr.StartedAt) {
 			t = hr.StartedAt
+		}
+	}
+	for _, tr := range event.TerraformRuns {
+		if tr.StartedAt != nil && t.After(*tr.StartedAt) {
+			t = tr.StartedAt
 		}
 	}
 	return t
