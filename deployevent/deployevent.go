@@ -61,9 +61,9 @@ type TerraformRun struct {
 	FinishedAt      *time.Time `json:"finished-at,omitempty"`
 	DurationSeconds *uint64    `json:"duration,omitempty"`
 
-	TerraformVersion string                 `json:"terraform-version"`
-	ChangeSummary    TerraformChangeSummary `json:"change-summary,omitempty"`
-	ErrorMessage     string                 `json:"error-message,omitempty"`
+	TerraformVersion string                  `json:"terraform-version"`
+	ChangeSummary    *TerraformChangeSummary `json:"change-summary,omitempty"`
+	ErrorMessage     string                  `json:"error-message,omitempty"`
 }
 
 // TerraformChangeSummary appears in TerraformRun. It describes how many
