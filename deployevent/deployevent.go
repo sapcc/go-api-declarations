@@ -17,8 +17,9 @@
 *
 *******************************************************************************/
 
-// Package deployevent contains data structures describing the event messages that
-// our CI generates for deployments (i.e. "helm install" and "helm upgrade".
+// Package deployevent contains data structures for the event messages that our
+// CI generates for Helm deployments (i.e. "helm install" and "helm upgrade")
+// and Terraform runs (e.g. "terragrunt apply").
 package deployevent
 
 import (
@@ -27,15 +28,16 @@ import (
 
 // Event describes a deployment (i.e. install or upgrade) of one or more Helm releases.
 type Event struct {
-	Region string `json:"region"`
-	//NOTE: This should be "recorded-at". The inconsistent naming needs to stay like this now for backwards compatibility.
+	//NOTE: "recorded_at" should be "recorded-at", and "helm-release" should be
+	//"helm-releases". The inconsistent naming needs to stay like this now for
+	//backwards compatibility.
+	Region     string             `json:"region"`
 	RecordedAt *time.Time         `json:"recorded_at"`
 	GitRepos   map[string]GitRepo `json:"git"`
-	// Note one of the *Release Types MUST be set
-	HelmReleases []*HelmRelease `json:"helm-release,omitempty"`
-	// this should be tf-releases but is named release for consistency
-	TerraformReleases []*TerraformRelease `json:"terraform-release,omitempty"`
-	Pipeline          Pipeline            `json:"pipeline"`
+	Pipeline   Pipeline           `json:"pipeline"`
+	// Exactly one of the following fields must be filled.
+	HelmReleases  []*HelmRelease  `json:"helm-release,omitempty"`
+	TerraformRuns []*TerraformRun `json:"terraform-runs,omitempty"`
 }
 
 // GitRepo appears in type Event. It describes the state of a Git repository
@@ -48,20 +50,28 @@ type GitRepo struct {
 	RemoteURL   string     `json:"remote-url"`
 }
 
-// TerraformRelease appears in type Event. It describes a terraform run that was executed and it's outcome
-type TerraformRelease struct {
-	TerraformVersion       string                 `json:"terraform_version"`
-	TerraformChangeSummary TerraformChangeSummary `json:"terraform_change_summary,omitempty"`
-	TerraformError         string                 `json:"terraform_error,omitempty"`
-	Outcome                Outcome                `json:"outcome"`
+// TerraformRun appears in type Event. It describes a Terraform run that was
+// executed and its outcome.
+type TerraformRun struct {
+	Outcome Outcome `json:"outcome"`
+
+	//StartedAt is not set for OutcomeNotDeployed.
+	StartedAt *time.Time `json:"started-at"`
+	//FinishedAt is not set for OutcomeNotDeployed and OutcomeHelmUpgradeFailed.
+	FinishedAt      *time.Time `json:"finished-at,omitempty"`
+	DurationSeconds *uint64    `json:"duration,omitempty"`
+
+	TerraformVersion string                 `json:"terraform-version"`
+	ChangeSummary    TerraformChangeSummary `json:"change-summary,omitempty"`
+	ErrorMessage     string                 `json:"error-message,omitempty"`
 }
 
-// TerraformChangeSummary appears in TerraformRelease. It describes how many resources were added / destroyed or changed by
-// a terraform run
+// TerraformChangeSummary appears in TerraformRun. It describes how many
+// resources were added, destroyed or changed by a Terraform run.
 type TerraformChangeSummary struct {
-	Add       int    `json:"add"`
-	Change    int    `json:"change"`
-	Remove    int    `json:"remove"`
+	Added     int    `json:"added"`
+	Changed   int    `json:"changed"`
+	Removed   int    `json:"removed"`
 	Operation string `json:"operation"`
 }
 
@@ -90,7 +100,8 @@ type HelmRelease struct {
 	DurationSeconds *uint64    `json:"duration,omitempty"`
 }
 
-// Outcome appears in type HelmRelease and TerraformRelease. It describes the final state of a release.
+// Outcome appears in type HelmRelease and TerraformRun. It describes the final
+// state of a release.
 type Outcome string
 
 const (
