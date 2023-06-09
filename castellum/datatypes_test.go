@@ -29,7 +29,7 @@ import (
 
 // vendored minimal version of https://github.com/sapcc/go-bits/blob/master/assert/assert.go
 // to avoid cyclic dependency
-func checkDeepEqual(t *testing.T, variable string, actual, expected interface{}) {
+func checkDeepEqual(t *testing.T, variable string, actual, expected any) {
 	t.Helper()
 	if reflect.DeepEqual(actual, expected) {
 		return

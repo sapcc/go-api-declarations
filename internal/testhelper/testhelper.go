@@ -34,7 +34,7 @@ func AssertNoErr(t *testing.T, err error) {
 	}
 }
 
-func CheckDeepEquals(t *testing.T, expected, actual interface{}) {
+func CheckDeepEquals(t *testing.T, expected, actual any) {
 	t.Helper()
 	if !reflect.DeepEqual(expected, actual) {
 		t.Errorf("expected value: %#v", expected)
@@ -42,7 +42,7 @@ func CheckDeepEquals(t *testing.T, expected, actual interface{}) {
 	}
 }
 
-func CheckJSONEquals(t *testing.T, expectedJSON string, actual interface{}) {
+func CheckJSONEquals(t *testing.T, expectedJSON string, actual any) {
 	t.Helper()
 	actualJSON, err := json.Marshal(actual)
 	if err != nil {
@@ -55,7 +55,7 @@ func CheckJSONEquals(t *testing.T, expectedJSON string, actual interface{}) {
 	}
 }
 
-func decodeJSON(t *testing.T, buf []byte) (data interface{}) {
+func decodeJSON(t *testing.T, buf []byte) (data any) {
 	t.Helper()
 	err := json.Unmarshal(buf, &data)
 	if err != nil {
