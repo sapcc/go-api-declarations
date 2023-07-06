@@ -176,6 +176,9 @@ func (event Event) CombinedOutcome() Outcome {
 	for _, tr := range event.TerraformRuns {
 		allOutcomes = append(allOutcomes, tr.Outcome)
 	}
+	if event.ADDeployment != nil {
+		allOutcomes = append(allOutcomes, event.ADDeployment.Outcome)
+	}
 
 	hasSucceeded := false
 	hasUndeployed := false
@@ -213,6 +216,12 @@ func (event Event) CombinedStartDate() *time.Time {
 	for _, tr := range event.TerraformRuns {
 		if tr.StartedAt != nil && t.After(*tr.StartedAt) {
 			t = tr.StartedAt
+		}
+	}
+	if event.ADDeployment != nil {
+		ad := *event.ADDeployment
+		if ad.StartedAt != nil && t.After(*ad.StartedAt) {
+			t = ad.StartedAt
 		}
 	}
 	return t
