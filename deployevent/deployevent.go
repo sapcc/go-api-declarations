@@ -36,8 +36,9 @@ type Event struct {
 	GitRepos   map[string]GitRepo `json:"git"`
 	Pipeline   Pipeline           `json:"pipeline"`
 	// Exactly one of the following fields must be filled.
-	HelmReleases  []*HelmRelease  `json:"helm-release,omitempty"`
-	TerraformRuns []*TerraformRun `json:"terraform-runs,omitempty"`
+	HelmReleases  []*HelmRelease             `json:"helm-release,omitempty"`
+	TerraformRuns []*TerraformRun            `json:"terraform-runs,omitempty"`
+	ADDeployment  *ActiveDirectoryDeployment `json:"active-directory-deployment,omitempty"`
 }
 
 // GitRepo appears in type Event. It describes the state of a Git repository
@@ -100,6 +101,20 @@ type HelmRelease struct {
 	DurationSeconds *uint64    `json:"duration,omitempty"`
 }
 
+// ActiveDirectory appears in type Event. It describes a deployment of Active
+// Directory to one of our Windows servers.
+type ActiveDirectoryDeployment struct {
+	Landscape string  `json:"landscape"` //e.g. "dev" or "prod"
+	Hostname  string  `json:"host"`
+	Outcome   Outcome `json:"outcome"`
+
+	//StartedAt is not set for OutcomeNotDeployed.
+	StartedAt *time.Time `json:"started-at"`
+	//FinishedAt is not set for OutcomeNotDeployed and OutcomeADDeploymentFailed.
+	FinishedAt      *time.Time `json:"finished-at,omitempty"`
+	DurationSeconds *uint64    `json:"duration,omitempty"`
+}
+
 // Outcome appears in type HelmRelease and TerraformRun. It describes the final
 // state of a release.
 type Outcome string
@@ -115,6 +130,9 @@ const (
 	//OutcomeHelmUpgradeFailed describes a Helm release that failed during
 	//`helm upgrade` or because some deployed pods did not come up correctly.
 	OutcomeHelmUpgradeFailed Outcome = "helm-upgrade-failed"
+	//OutcomeADDeploymentFailed describes an Active Directory deployment that
+	//failed or did not run all the way through.
+	OutcomeADDeploymentFailed Outcome = "active-directory-deployment-failed"
 	//OutcomeE2ETestFailed describes a Helm release that was deployed, but a
 	//subsequent end-to-end test failed.
 	OutcomeE2ETestFailed Outcome = "e2e-test-failed"
@@ -128,7 +146,7 @@ const (
 // Helm release.
 func (o Outcome) IsKnownInputValue() bool {
 	switch o {
-	case OutcomeNotDeployed, OutcomeSucceeded, OutcomeHelmUpgradeFailed, OutcomeE2ETestFailed, OutcomeTerraformRunFailed:
+	case OutcomeNotDeployed, OutcomeSucceeded, OutcomeHelmUpgradeFailed, OutcomeE2ETestFailed, OutcomeTerraformRunFailed, OutcomeADDeploymentFailed:
 		return true
 	case OutcomePartiallyDeployed:
 		return false //not acceptable on an individual release, can only appear as result of Event.CombinedOutcome()
@@ -163,7 +181,7 @@ func (event Event) CombinedOutcome() Outcome {
 	hasUndeployed := false
 	for _, outcome := range allOutcomes {
 		switch outcome {
-		case OutcomeHelmUpgradeFailed, OutcomeE2ETestFailed, OutcomeTerraformRunFailed:
+		case OutcomeHelmUpgradeFailed, OutcomeE2ETestFailed, OutcomeTerraformRunFailed, OutcomeADDeploymentFailed:
 			//specific failure forces the entire result to be that failure
 			return outcome
 		case OutcomeSucceeded:
