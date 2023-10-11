@@ -32,14 +32,14 @@ import (
 
 // Commitment is the API representation of an *existing* commitment as reported by Limes.
 type Commitment struct {
-	ID               int64                 `json:"id"`
-	ServiceType      string                `json:"service_type"`
-	ResourceName     string                `json:"resource_name"`
-	AvailabilityZone string                `json:"availability_zone"`
-	Amount           uint64                `json:"amount"`
-	Unit             limes.Unit            `json:"unit"`
-	Duration         CommitmentDuration    `json:"duration"`
-	RequestedAt      limes.UnixEncodedTime `json:"requested_at"`
+	ID               int64                  `json:"id"`
+	ServiceType      string                 `json:"service_type"`
+	ResourceName     string                 `json:"resource_name"`
+	AvailabilityZone limes.AvailabilityZone `json:"availability_zone"`
+	Amount           uint64                 `json:"amount"`
+	Unit             limes.Unit             `json:"unit"`
+	Duration         CommitmentDuration     `json:"duration"`
+	RequestedAt      limes.UnixEncodedTime  `json:"requested_at"`
 	// ConfirmedAt and ExpiresAt are only filled after the commitment was confirmed.
 	ConfirmedAt *limes.UnixEncodedTime `json:"confirmed_at,omitempty"`
 	ExpiresAt   *limes.UnixEncodedTime `json:"expires_at,omitempty"`
@@ -50,11 +50,11 @@ type Commitment struct {
 
 // CommitmentRequest is the API representation of a *new* commitment as requested by a user.
 type CommitmentRequest struct {
-	ServiceType      string             `json:"service_type"`
-	ResourceName     string             `json:"resource_name"`
-	AvailabilityZone string             `json:"availability_zone"`
-	Amount           uint64             `json:"amount"`
-	Duration         CommitmentDuration `json:"duration"`
+	ServiceType      string                 `json:"service_type"`
+	ResourceName     string                 `json:"resource_name"`
+	AvailabilityZone limes.AvailabilityZone `json:"availability_zone"`
+	Amount           uint64                 `json:"amount"`
+	Duration         CommitmentDuration     `json:"duration"`
 }
 
 // CommitmentTransferStatus is an enum.
