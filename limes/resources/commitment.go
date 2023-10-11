@@ -26,6 +26,52 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/sapcc/go-api-declarations/limes"
+)
+
+// Commitment is the API representation of an *existing* commitment as reported by Limes.
+type Commitment struct {
+	ID               int64                 `json:"id"`
+	ServiceType      string                `json:"service_type"`
+	ResourceName     string                `json:"resource_name"`
+	AvailabilityZone string                `json:"availability_zone"`
+	Amount           uint64                `json:"amount"`
+	Unit             limes.Unit            `json:"unit"`
+	Duration         CommitmentDuration    `json:"duration"`
+	RequestedAt      limes.UnixEncodedTime `json:"requested_at"`
+	//ConfirmedAt and ExpiresAt are only filled after the commitment was confirmed.
+	ConfirmedAt *limes.UnixEncodedTime `json:"confirmed_at,omitempty"`
+	ExpiresAt   *limes.UnixEncodedTime `json:"expires_at,omitempty"`
+	// TransferStatus and TransferToken are only filled while the commitment is marked for transfer.
+	TransferStatus CommitmentTransferStatus `json:"transfer_status,omitempty"`
+	TransferToken  string                   `json:"transfer_token,omitempty"`
+}
+
+// CommitmentRequest is the API representation of a *new* commitment as requested by a user.
+type CommitmentRequest struct {
+	ServiceType      string             `json:"service_type"`
+	ResourceName     string             `json:"resource_name"`
+	AvailabilityZone string             `json:"availability_zone"`
+	Amount           uint64             `json:"amount"`
+	Duration         CommitmentDuration `json:"duration"`
+}
+
+// CommitmentTransferStatus is an enum.
+type CommitmentTransferStatus string
+
+const (
+	// CommitmentTransferStatusNone is the default transfer status,
+	// meaning that the commitment is not marked for transfer.
+	CommitmentTransferStatusNone CommitmentTransferStatus = ""
+
+	// CommitmentTransferStatusPublic means that the commitment is marked for transfer,
+	// and is visible as such to all other projects.
+	CommitmentTransferStatusPublic CommitmentTransferStatus = "public"
+
+	// CommitmentTransferStatusUnlisted means that the commitment is marked for transfer,
+	// but the receiver needs to know the commitment's transfer token.
+	CommitmentTransferStatusUnlisted CommitmentTransferStatus = "unlisted"
 )
 
 // CommitmentDuration is the parsed representation of a commitment duration.
