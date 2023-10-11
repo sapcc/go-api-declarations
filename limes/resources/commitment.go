@@ -1,0 +1,163 @@
+/******************************************************************************
+*
+*  Copyright 2023 SAP SE
+*
+*  Licensed under the Apache License, Version 2.0 (the "License");
+*  you may not use this file except in compliance with the License.
+*  You may obtain a copy of the License at
+*
+*      http://www.apache.org/licenses/LICENSE-2.0
+*
+*  Unless required by applicable law or agreed to in writing, software
+*  distributed under the License is distributed on an "AS IS" BASIS,
+*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+*  See the License for the specific language governing permissions and
+*  limitations under the License.
+*
+******************************************************************************/
+
+package limesresources
+
+import (
+	"database/sql/driver"
+	"encoding/json"
+	"fmt"
+	"regexp"
+	"strconv"
+	"strings"
+	"time"
+)
+
+// CommitmentDuration is the parsed representation of a commitment duration.
+//
+// The behavior of this type is similar to time.Duration or limesrates.Window for short durations
+// (which are commonly used in automated tests for convenience and clarity),
+// but also allows large durations with calendar-compatible calculations
+// (e.g. "1y" is actually one year and not just 365 days).
+type CommitmentDuration struct {
+	Years  int
+	Months int
+	Days   int
+	Short  time.Duration //represents durations of hours, minutes and seconds
+}
+
+var cdTokenRx = regexp.MustCompile(`^([0-9]*)\s*(second|minute|hour|day|month|year)s?$`)
+
+// ParseCommitmentDuration parses the string representation of a CommitmentDuration.
+// Acceptable inputs include "5 hours" and "1year,2months,3days".
+func ParseCommitmentDuration(input string) (CommitmentDuration, error) {
+	var result CommitmentDuration
+	for _, field := range strings.Split(input, ",") {
+		field = strings.TrimSpace(field)
+		if field == "" {
+			continue
+		}
+		match := cdTokenRx.FindStringSubmatch(field)
+		if match == nil {
+			return CommitmentDuration{}, fmt.Errorf("could not parse CommitmentDuration %q: malformed field %q", input, field)
+		}
+		amount, err := strconv.Atoi(match[1])
+		if err != nil {
+			return CommitmentDuration{}, fmt.Errorf("could not parse CommitmentDuration %q: malformed field %q", input, field)
+		}
+		switch match[2] {
+		case "second":
+			result.Short += time.Duration(amount) * time.Second
+		case "minute":
+			result.Short += time.Duration(amount) * time.Minute
+		case "hour":
+			result.Short += time.Duration(amount) * time.Hour
+		case "day":
+			result.Days += amount
+		case "month":
+			result.Months += amount
+		case "year":
+			result.Years += amount
+		}
+	}
+
+	if result.Years == 0 && result.Months == 0 && result.Days == 0 && result.Short == 0 {
+		return CommitmentDuration{}, fmt.Errorf("could not parse CommitmentDuration %q: empty duration", input)
+	}
+	return result, nil
+}
+
+// String returns the canonical string representation of this duration.
+func (d CommitmentDuration) String() string {
+	var fields []string
+	format := func(amount int, unit string) {
+		switch amount {
+		case 0:
+			return
+		case 1:
+			fields = append(fields, "1 "+unit)
+		default:
+			fields = append(fields, fmt.Sprintf("%d %ss", amount, unit))
+		}
+	}
+
+	format(d.Years, "year")
+	format(d.Months, "month")
+	format(d.Days, "day")
+	duration := d.Short
+
+	hours := duration / time.Hour
+	duration -= hours * time.Hour //nolint:durationcheck // false positive
+	format(int(hours), "hour")
+
+	minutes := duration / time.Minute
+	duration -= minutes * time.Minute //nolint:durationcheck // false positive
+	format(int(minutes), "minute")
+
+	format(int(duration/time.Second), "second")
+	return strings.Join(fields, ", ")
+}
+
+// AddTo adds this duration to the given time.
+func (d CommitmentDuration) AddTo(t time.Time) time.Time {
+	return t.AddDate(d.Years, d.Months, d.Days).Add(d.Short)
+}
+
+// MarshalJSON implements the json.Marshaler interface.
+func (d CommitmentDuration) MarshalJSON() ([]byte, error) {
+	return json.Marshal(d.String())
+}
+
+// MarshalYAML implements the yaml.Marshaler interface.
+func (d CommitmentDuration) MarshalYAML() (any, error) {
+	return d.String(), nil
+}
+
+// UnmarshalYAML implements the yaml.Unmarshaler interface.
+func (d *CommitmentDuration) UnmarshalYAML(unmarshal func(any) error) error {
+	var input string
+	err := unmarshal(&input)
+	if err != nil {
+		return err
+	}
+	*d, err = ParseCommitmentDuration(input)
+	return err
+}
+
+// Scan implements the sql.Scanner interface.
+func (d *CommitmentDuration) Scan(src any) (err error) {
+	var srcString string
+	switch src := src.(type) {
+	case string:
+		srcString = src
+	case []byte:
+		srcString = string(src)
+	case nil:
+		srcString = ""
+	default:
+		return fmt.Errorf("cannot scan value of type %T into type limesresources.CommitmentDuration", src)
+	}
+
+	*d, err = ParseCommitmentDuration(srcString)
+	return err
+}
+
+// Value implements the sql/driver.Valuer interface.
+func (d CommitmentDuration) Value() (driver.Value, error) {
+	return driver.Value(d.String()), nil
+}
