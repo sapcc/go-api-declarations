@@ -170,6 +170,17 @@ func (d CommitmentDuration) MarshalJSON() ([]byte, error) {
 	return json.Marshal(d.String())
 }
 
+// UnmarshalJSON implements the json.Unmarshaler interface.
+func (d *CommitmentDuration) UnmarshalJSON(input []byte) error {
+	var s string
+	err := json.Unmarshal(input, &s)
+	if err != nil {
+		return err
+	}
+	*d, err = ParseCommitmentDuration(s)
+	return err
+}
+
 // MarshalYAML implements the yaml.Marshaler interface.
 func (d CommitmentDuration) MarshalYAML() (any, error) {
 	return d.String(), nil
