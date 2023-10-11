@@ -40,7 +40,7 @@ type Commitment struct {
 	Unit             limes.Unit            `json:"unit"`
 	Duration         CommitmentDuration    `json:"duration"`
 	RequestedAt      limes.UnixEncodedTime `json:"requested_at"`
-	//ConfirmedAt and ExpiresAt are only filled after the commitment was confirmed.
+	// ConfirmedAt and ExpiresAt are only filled after the commitment was confirmed.
 	ConfirmedAt *limes.UnixEncodedTime `json:"confirmed_at,omitempty"`
 	ExpiresAt   *limes.UnixEncodedTime `json:"expires_at,omitempty"`
 	// TransferStatus and TransferToken are only filled while the commitment is marked for transfer.
@@ -81,6 +81,7 @@ const (
 // but also allows large durations with calendar-compatible calculations
 // (e.g. "1y" is actually one year and not just 365 days).
 type CommitmentDuration struct {
+	//NOTE: this does not use uint etc. because time.Time.AddDate() wants int
 	Years  int
 	Months int
 	Days   int
@@ -90,7 +91,7 @@ type CommitmentDuration struct {
 var cdTokenRx = regexp.MustCompile(`^([0-9]*)\s*(second|minute|hour|day|month|year)s?$`)
 
 // ParseCommitmentDuration parses the string representation of a CommitmentDuration.
-// Acceptable inputs include "5 hours" and "1year,2months,3days".
+// Acceptable inputs include "5 hours" and "1year,2 \t months,  3days".
 func ParseCommitmentDuration(input string) (CommitmentDuration, error) {
 	var result CommitmentDuration
 	for _, field := range strings.Split(input, ",") {
