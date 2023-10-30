@@ -31,12 +31,30 @@ var projectServicesMockJSON = `
 				{
 					"name": "capacity",
 					"unit": "B",
+					"per_az": {
+						"az-one": {
+							"quota": 6,
+							"committed": {
+								"1 year": 3
+							},
+							"usage": 2
+						},
+						"az-two": {
+							"quota": 4,
+							"usage": 0
+						}
+					},
 					"quota": 10,
 					"usable_quota": 11,
 					"usage": 2
 				},
 				{
 					"name": "things",
+					"per_az": {
+						"any": {
+							"usage": 2
+						}
+					},
 					"quota": 10,
 					"usable_quota": 10,
 					"usage": 2
@@ -52,6 +70,19 @@ var projectResourcesMockJSON = `
 		{
 			"name": "capacity",
 			"unit": "B",
+			"per_az": {
+				"az-one": {
+					"quota": 6,
+					"committed": {
+						"1 year": 3
+					},
+					"usage": 2
+				},
+				"az-two": {
+					"quota": 4,
+					"usage": 0
+				}
+			},
 			"quota": 10,
 			"usable_quota": 11,
 			"usage": 2
@@ -59,6 +90,11 @@ var projectResourcesMockJSON = `
 		{
 			"name": "things",
 			"quota": 10,
+			"per_az": {
+				"any": {
+					"usage": 2
+				}
+			},
 			"usable_quota": 10,
 			"usage": 2
 		}
@@ -71,6 +107,10 @@ var projectMockResources = &ProjectResourceReports{
 			Name: "capacity",
 			Unit: limes.UnitBytes,
 		},
+		PerAZ: ProjectAZResourceReports{
+			"az-one": {Quota: p2u64(6), Usage: 2, Committed: map[string]uint64{"1 year": 3}},
+			"az-two": {Quota: p2u64(4), Usage: 0},
+		},
 		Quota:       p2u64(10),
 		UsableQuota: p2u64(11),
 		Usage:       2,
@@ -78,6 +118,9 @@ var projectMockResources = &ProjectResourceReports{
 	"things": &ProjectResourceReport{
 		ResourceInfo: ResourceInfo{
 			Name: "things",
+		},
+		PerAZ: ProjectAZResourceReports{
+			limes.AvailabilityZoneAny: {Usage: 2},
 		},
 		Quota:       p2u64(10),
 		UsableQuota: p2u64(10),

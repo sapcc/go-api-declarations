@@ -30,6 +30,16 @@ var clusterServicesMockJSON = `
 				{
 					"name": "cores",
 					"capacity": 500,
+					"per_az": {
+						"az-one": {
+							"capacity": 250,
+							"usage": 70
+						},
+						"az-two": {
+							"capacity": 250,
+							"usage": 30
+						}
+					},
 					"per_availability_zone": [
 						{
 							"name": "az-one",
@@ -64,6 +74,16 @@ var clusterResourcesMockJSON = `
 		{
 			"name": "cores",
 			"capacity": 500,
+			"per_az": {
+				"az-one": {
+					"capacity": 250,
+					"usage": 70
+				},
+				"az-two": {
+					"capacity": 250,
+					"usage": 30
+				}
+			},
 			"per_availability_zone": [
 				{
 					"name": "az-one",
@@ -95,6 +115,16 @@ var clusterMockResources = &ClusterResourceReports{
 			Name: "cores",
 		},
 		Capacity: &coresCap,
+		PerAZ: map[limes.AvailabilityZone]ClusterAZResourceReport{
+			"az-one": {
+				Capacity: 250,
+				Usage:    p2u64(70),
+			},
+			"az-two": {
+				Capacity: 250,
+				Usage:    p2u64(30),
+			},
+		},
 		CapacityPerAZ: ClusterAvailabilityZoneReports{
 			"az-one": {
 				Name:     "az-one",
