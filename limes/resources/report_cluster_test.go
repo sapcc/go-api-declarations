@@ -115,7 +115,7 @@ var clusterMockResources = &ClusterResourceReports{
 			Name: "cores",
 		},
 		Capacity: &coresCap,
-		PerAZ: map[limes.AvailabilityZone]ClusterAZResourceReport{
+		PerAZ: map[limes.AvailabilityZone]*ClusterAZResourceReport{
 			"az-one": {
 				Capacity: 250,
 				Usage:    p2u64(70),
