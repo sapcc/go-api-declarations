@@ -82,6 +82,9 @@ type ClusterAZResourceReport struct {
 	Usage *uint64 `json:"usage,omitempty"`
 	//ProjectsUsage is the aggregate of the usage across all projects, as reported by the backend on the project level.
 	ProjectsUsage uint64 `json:"projects_usage,omitempty"`
+	//PhysicalUsage is collected per project and then aggregated, same as ProjectsUsage.
+	PhysicalUsage *uint64         `json:"physical_usage,omitempty"`
+	Subcapacities json.RawMessage `json:"subcapacities,omitempty"`
 }
 
 // ClusterServiceReports provides fast lookup of services by service type, but
