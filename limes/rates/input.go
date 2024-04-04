@@ -22,16 +22,17 @@ package limesrates
 import (
 	"encoding/json"
 	"sort"
+
+	"github.com/sapcc/go-api-declarations/limes"
 )
 
 // RateRequest contains new rate limit values for rates in multiple services.
-// The map key is the service type. This type is used to serialize JSON request
-// bodies in PUT requests on projects.
-type RateRequest map[string]ServiceRequest
+// This type is used to serialize JSON request bodies in PUT requests on projects.
+type RateRequest map[limes.ServiceType]ServiceRequest
 
 // ServiceQuotaRequest contains new rate limit values for rates in a single
-// service. The map key is the rate name. This type appears in type RateRequest.
-type ServiceRequest map[string]RateLimitRequest
+// service. This type appears in type RateRequest.
+type ServiceRequest map[RateName]RateLimitRequest
 
 // RateLimitRequest contains new values for a single rate limit.
 // It appears in type ServiceRequest.
@@ -41,13 +42,13 @@ type RateLimitRequest struct {
 }
 
 type pureRateLimitRequest struct {
-	Name   string `json:"name"`
-	Limit  uint64 `json:"limit"`
-	Window Window `json:"window"`
+	Name   RateName `json:"name"`
+	Limit  uint64   `json:"limit"`
+	Window Window   `json:"window"`
 }
 
 type pureServiceRequest struct {
-	Type  string                 `json:"type"`
+	Type  limes.ServiceType      `json:"type"`
 	Rates []pureRateLimitRequest `json:"rates"`
 }
 

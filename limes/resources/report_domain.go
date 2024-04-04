@@ -77,11 +77,11 @@ type DomainAZResourceReport struct {
 
 // DomainServiceReports provides fast lookup of services using a map, but serializes
 // to JSON as a list.
-type DomainServiceReports map[string]*DomainServiceReport
+type DomainServiceReports map[limes.ServiceType]*DomainServiceReport
 
 // DomainResourceReports provides fast lookup of resources using a map, but serializes
 // to JSON as a list.
-type DomainResourceReports map[string]*DomainResourceReport
+type DomainResourceReports map[ResourceName]*DomainResourceReport
 
 // DomainAZResourceReport is a substructure of DomainResourceReport that breaks
 // down quota and usage data for a single resource by availability zone.

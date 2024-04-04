@@ -33,8 +33,8 @@ import (
 // Commitment is the API representation of an *existing* commitment as reported by Limes.
 type Commitment struct {
 	ID               int64                  `json:"id"`
-	ServiceType      string                 `json:"service_type"`
-	ResourceName     string                 `json:"resource_name"`
+	ServiceType      limes.ServiceType      `json:"service_type"`
+	ResourceName     ResourceName           `json:"resource_name"`
 	AvailabilityZone limes.AvailabilityZone `json:"availability_zone"`
 	Amount           uint64                 `json:"amount"`
 	Unit             limes.Unit             `json:"unit,omitempty"`
@@ -60,8 +60,8 @@ type Commitment struct {
 
 // CommitmentRequest is the API representation of a *new* commitment as requested by a user.
 type CommitmentRequest struct {
-	ServiceType      string                 `json:"service_type"`
-	ResourceName     string                 `json:"resource_name"`
+	ServiceType      limes.ServiceType      `json:"service_type"`
+	ResourceName     ResourceName           `json:"resource_name"`
 	AvailabilityZone limes.AvailabilityZone `json:"availability_zone"`
 	Amount           uint64                 `json:"amount"`
 	Duration         CommitmentDuration     `json:"duration"`

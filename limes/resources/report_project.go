@@ -89,11 +89,11 @@ type ProjectAZResourceReport struct {
 
 // ProjectServiceReports provides fast lookup of services using a map, but serializes
 // to JSON as a list.
-type ProjectServiceReports map[string]*ProjectServiceReport
+type ProjectServiceReports map[limes.ServiceType]*ProjectServiceReport
 
 // ProjectResourceReports provides fast lookup of resources using a map, but serializes
 // to JSON as a list.
-type ProjectResourceReports map[string]*ProjectResourceReport
+type ProjectResourceReports map[ResourceName]*ProjectResourceReport
 
 // ProjectAZResourceReport is a substructure of ProjectResourceReport that breaks
 // down quota and usage data for a single resource by availability zone.

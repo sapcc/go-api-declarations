@@ -99,11 +99,11 @@ type ClusterAZResourceReport struct {
 
 // ClusterServiceReports provides fast lookup of services by service type, but
 // serializes to JSON as a list.
-type ClusterServiceReports map[string]*ClusterServiceReport
+type ClusterServiceReports map[limes.ServiceType]*ClusterServiceReport
 
 // ClusterResourceReports provides fast lookup of resources by resource name,
 // but serializes to JSON as a list.
-type ClusterResourceReports map[string]*ClusterResourceReport
+type ClusterResourceReports map[ResourceName]*ClusterResourceReport
 
 // ClusterAvailabilityZoneReports provides fast lookup of availability zones
 // using a map, but serializes to JSON as a list.

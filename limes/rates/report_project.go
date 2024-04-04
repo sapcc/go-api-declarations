@@ -50,8 +50,8 @@ type ProjectRateReport struct {
 
 // ProjectServiceReports provides fast lookup of services using a map, but serializes
 // to JSON as a list.
-type ProjectServiceReports map[string]*ProjectServiceReport
+type ProjectServiceReports map[limes.ServiceType]*ProjectServiceReport
 
 // ProjectRateReports provides fast lookup of rates using a map, but serializes
 // to JSON as a list.
-type ProjectRateReports map[string]*ProjectRateReport
+type ProjectRateReports map[RateName]*ProjectRateReport
