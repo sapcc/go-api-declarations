@@ -44,12 +44,12 @@ func assertConvertError(t *testing.T, from ValueWithUnit, to Unit, expectedError
 }
 
 func Test_ValueWithUnit_ConvertTo(t *testing.T) {
-	//happy cases
+	// happy cases
 	assertConvertSuccess(t, ValueWithUnit{5, UnitMebibytes}, ValueWithUnit{5 << 20, UnitBytes})
 	assertConvertSuccess(t, ValueWithUnit{5 << 20, UnitBytes}, ValueWithUnit{5, UnitMebibytes})
 	assertConvertSuccess(t, ValueWithUnit{42, UnitBytes}, ValueWithUnit{42, UnitBytes})
 
-	//failure cases
+	// failure cases
 	assertConvertError(t, ValueWithUnit{5, UnitMebibytes}, UnitNone,
 		"cannot convert value from MiB to <count> because units are incompatible",
 	)

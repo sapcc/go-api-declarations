@@ -36,8 +36,8 @@ func checkDeepEqual(t *testing.T, variable string, actual, expected any) {
 	}
 
 	//NOTE: We HAVE TO use %#v here, even if it's verbose. Every other generic
-	//formatting directive will not correctly distinguish all values, and thus
-	//possibly render empty diffs on failure. For example,
+	// formatting directive will not correctly distinguish all values, and thus
+	// possibly render empty diffs on failure. For example,
 	//
 	//	fmt.Sprintf("%+v\n", []string{})    == "[]\n"
 	//	fmt.Sprintf("%+v\n", []string(nil)) == "[]\n"
@@ -80,7 +80,7 @@ func TestUsageValuesEncodingDecoding(t *testing.T) {
 			return fmt.Sprintf("%s no. %d/%d", task, idx+1, len(testCases))
 		}
 
-		//check encoding into SQL
+		// check encoding into SQL
 		actualSQLEncoding, err := tc.UsageValues.Value()
 		if err == nil {
 			checkDeepEqual(t, indexed("SQLEncoding"), actualSQLEncoding, driver.Value(tc.SQLEncoding))
@@ -88,7 +88,7 @@ func TestUsageValuesEncodingDecoding(t *testing.T) {
 			t.Errorf("SQL encoding of %#v failed: %v", tc.UsageValues, err.Error())
 		}
 
-		//check decoding from SQL
+		// check decoding from SQL
 		var actualDecoded UsageValues
 		err = actualDecoded.Scan(tc.SQLEncoding)
 		if err == nil {
@@ -97,7 +97,7 @@ func TestUsageValuesEncodingDecoding(t *testing.T) {
 			t.Errorf("SQL decoding of %q failed: %v", tc.SQLEncoding, err.Error())
 		}
 
-		//check encoding into JSON
+		// check encoding into JSON
 		actualJSONEncoding, err := json.Marshal(tc.UsageValues)
 		if err == nil {
 			checkDeepEqual(t, indexed("JSONEncoding"), string(actualJSONEncoding), tc.JSONEncoding)
@@ -105,7 +105,7 @@ func TestUsageValuesEncodingDecoding(t *testing.T) {
 			t.Errorf("JSON encoding of %#v failed: %v", tc.UsageValues, err.Error())
 		}
 
-		//check decoding from JSON
+		// check decoding from JSON
 		actualDecoded = UsageValues{}
 		err = json.Unmarshal([]byte(tc.JSONEncoding), &actualDecoded)
 		if err == nil {

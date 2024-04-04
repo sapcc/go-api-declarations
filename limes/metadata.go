@@ -48,15 +48,15 @@ type ServiceType string
 // ServiceInfo contains the metadata for a backend service that appears in both
 // resource data and rate data reports.
 type ServiceInfo struct {
-	//Type returns the service type that the backend service for this
-	//plugin implements. This string must be identical to the type string from
-	//the Keystone service catalog.
+	// Type returns the service type that the backend service for this
+	// plugin implements. This string must be identical to the type string from
+	// the Keystone service catalog.
 	Type ServiceType `json:"type"`
-	//ProductName returns the name of the product that is the reference
-	//implementation for this service. For example, ProductName = "nova" for
-	//Type = "compute".
+	// ProductName returns the name of the product that is the reference
+	// implementation for this service. For example, ProductName = "nova" for
+	// Type = "compute".
 	ProductName string `json:"-"`
-	//Area is a hint that UIs can use to group similar services.
+	// Area is a hint that UIs can use to group similar services.
 	Area string `json:"area"`
 }
 

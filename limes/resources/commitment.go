@@ -96,7 +96,7 @@ type CommitmentDuration struct {
 	Years  int
 	Months int
 	Days   int
-	Short  time.Duration //represents durations of hours, minutes and seconds
+	Short  time.Duration // represents durations of hours, minutes and seconds
 }
 
 var cdTokenRx = regexp.MustCompile(`^([0-9]*)\s*(second|minute|hour|day|month|year)s?$`)

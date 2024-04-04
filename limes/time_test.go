@@ -26,7 +26,7 @@ import (
 )
 
 func TestMarshalTime(t *testing.T) {
-	tst := time.Unix(23, 0).UTC().Add(300 * time.Millisecond) //test that marshalling ignores the subsecond part
+	tst := time.Unix(23, 0).UTC().Add(300 * time.Millisecond) // test that marshalling ignores the subsecond part
 	u := UnixEncodedTime{Time: tst}
 
 	buf, err := json.Marshal(u)

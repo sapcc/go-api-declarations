@@ -67,14 +67,14 @@ func (r QuotaRequest) MarshalJSON() ([]byte, error) {
 			})
 		}
 
-		//ensure test reproducibility
+		// ensure test reproducibility
 		sort.Slice(sReq.Resources, func(i, j int) bool {
 			return sReq.Resources[i].Name < sReq.Resources[j].Name
 		})
 		list = append(list, sReq)
 	}
 
-	//ensure test reproducibility
+	// ensure test reproducibility
 	sort.Slice(list, func(i, j int) bool {
 		return list[i].Type < list[j].Type
 	})
@@ -90,7 +90,7 @@ func (r *QuotaRequest) UnmarshalJSON(input []byte) error {
 		return err
 	}
 
-	//remove existing content
+	// remove existing content
 	for key := range *r {
 		delete(*r, key)
 	}
@@ -98,7 +98,7 @@ func (r *QuotaRequest) UnmarshalJSON(input []byte) error {
 		*r = make(QuotaRequest, len(data))
 	}
 
-	//add new content
+	// add new content
 	for _, sReq := range data {
 		srvReq := make(ServiceQuotaRequest, len(sReq.Resources))
 

@@ -29,8 +29,8 @@ import (
 // Event describes a deployment (i.e. install or upgrade) of one or more Helm releases.
 type Event struct {
 	//NOTE: "recorded_at" should be "recorded-at", and "helm-release" should be
-	//"helm-releases". The inconsistent naming needs to stay like this now for
-	//backwards compatibility.
+	// "helm-releases". The inconsistent naming needs to stay like this now for
+	// backwards compatibility.
 	Region     string             `json:"region"`
 	RecordedAt *time.Time         `json:"recorded_at"`
 	GitRepos   map[string]GitRepo `json:"git"`
@@ -56,9 +56,9 @@ type GitRepo struct {
 type TerraformRun struct {
 	Outcome Outcome `json:"outcome"`
 
-	//StartedAt is not set for OutcomeNotDeployed.
+	// StartedAt is not set for OutcomeNotDeployed.
 	StartedAt *time.Time `json:"started-at"`
-	//FinishedAt is not set for OutcomeNotDeployed and OutcomeHelmUpgradeFailed.
+	// FinishedAt is not set for OutcomeNotDeployed and OutcomeHelmUpgradeFailed.
 	FinishedAt      *time.Time `json:"finished-at,omitempty"`
 	DurationSeconds *uint64    `json:"duration,omitempty"`
 
@@ -82,21 +82,21 @@ type HelmRelease struct {
 	Name    string  `json:"name"`
 	Outcome Outcome `json:"outcome"`
 
-	//ChartID contains "${name}-${version}" for charts pulled from Chartmuseum.
-	//ChartPath contains the path to that chart inside helm-charts.git for charts
-	//coming from helm-charts.git directly. Exactly one of those must be set.
+	// ChartID contains "${name}-${version}" for charts pulled from Chartmuseum.
+	// ChartPath contains the path to that chart inside helm-charts.git for charts
+	// coming from helm-charts.git directly. Exactly one of those must be set.
 	ChartID   string `json:"chart-id"`
 	ChartPath string `json:"chart-path"`
 	Cluster   string `json:"cluster"`
-	//ImageVersion is only set for releases that take an image version produced by an earlier pipeline job.
+	// ImageVersion is only set for releases that take an image version produced by an earlier pipeline job.
 	ImageVersion string `json:"image-version,omitempty"`
 	Namespace    string `json:"kubernetes-namespace"`
-	//DeployedImages is a list of all Docker image references that were found in the deployed Helm manifest.
+	// DeployedImages is a list of all Docker image references that were found in the deployed Helm manifest.
 	DeployedImages []string `json:"deployed-images"`
 
-	//StartedAt is not set for OutcomeNotDeployed.
+	// StartedAt is not set for OutcomeNotDeployed.
 	StartedAt *time.Time `json:"started-at"`
-	//FinishedAt is not set for OutcomeNotDeployed and OutcomeHelmUpgradeFailed.
+	// FinishedAt is not set for OutcomeNotDeployed and OutcomeHelmUpgradeFailed.
 	FinishedAt      *time.Time `json:"finished-at,omitempty"`
 	DurationSeconds *uint64    `json:"duration,omitempty"`
 }
@@ -104,13 +104,13 @@ type HelmRelease struct {
 // ActiveDirectory appears in type Event. It describes a deployment of Active
 // Directory to one of our Windows servers.
 type ActiveDirectoryDeployment struct {
-	Landscape string  `json:"landscape"` //e.g. "dev" or "prod"
+	Landscape string  `json:"landscape"` // e.g. "dev" or "prod"
 	Hostname  string  `json:"host"`
 	Outcome   Outcome `json:"outcome"`
 
-	//StartedAt is not set for OutcomeNotDeployed.
+	// StartedAt is not set for OutcomeNotDeployed.
 	StartedAt *time.Time `json:"started-at"`
-	//FinishedAt is not set for OutcomeNotDeployed and OutcomeADDeploymentFailed.
+	// FinishedAt is not set for OutcomeNotDeployed and OutcomeADDeploymentFailed.
 	FinishedAt      *time.Time `json:"finished-at,omitempty"`
 	DurationSeconds *uint64    `json:"duration,omitempty"`
 }
@@ -120,25 +120,25 @@ type ActiveDirectoryDeployment struct {
 type Outcome string
 
 const (
-	//OutcomeNotDeployed describes a Helm release that was not deployed because
-	//of an unexpected error before `helm upgrade`.
+	// OutcomeNotDeployed describes a Helm release that was not deployed because
+	// of an unexpected error before `helm upgrade`.
 	OutcomeNotDeployed Outcome = "not-deployed"
-	//OutcomeSucceeded describes a Helm release that succeeded.
+	// OutcomeSucceeded describes a Helm release that succeeded.
 	OutcomeSucceeded Outcome = "succeeded"
-	//OutcomeTerraformRunFailed describes a terraform run that failed
+	// OutcomeTerraformRunFailed describes a terraform run that failed
 	OutcomeTerraformRunFailed Outcome = "terraform-run-failed"
-	//OutcomeHelmUpgradeFailed describes a Helm release that failed during
-	//`helm upgrade` or because some deployed pods did not come up correctly.
+	// OutcomeHelmUpgradeFailed describes a Helm release that failed during
+	// `helm upgrade` or because some deployed pods did not come up correctly.
 	OutcomeHelmUpgradeFailed Outcome = "helm-upgrade-failed"
-	//OutcomeADDeploymentFailed describes an Active Directory deployment that
-	//failed or did not run all the way through.
+	// OutcomeADDeploymentFailed describes an Active Directory deployment that
+	// failed or did not run all the way through.
 	OutcomeADDeploymentFailed Outcome = "active-directory-deployment-failed"
-	//OutcomeE2ETestFailed describes a Helm release that was deployed, but a
-	//subsequent end-to-end test failed.
+	// OutcomeE2ETestFailed describes a Helm release that was deployed, but a
+	// subsequent end-to-end test failed.
 	OutcomeE2ETestFailed Outcome = "e2e-test-failed"
-	//OutcomePartiallyDeployed is returned by Event.CombinedOutcome() when the event
-	//in question contains some releases that are "succeeded" and some that are
-	//"not-deployed". This value is not acceptable for an individual Helm release.
+	// OutcomePartiallyDeployed is returned by Event.CombinedOutcome() when the event
+	// in question contains some releases that are "succeeded" and some that are
+	// "not-deployed". This value is not acceptable for an individual Helm release.
 	OutcomePartiallyDeployed Outcome = "partially-deployed"
 )
 
@@ -149,7 +149,7 @@ func (o Outcome) IsKnownInputValue() bool {
 	case OutcomeNotDeployed, OutcomeSucceeded, OutcomeHelmUpgradeFailed, OutcomeE2ETestFailed, OutcomeTerraformRunFailed, OutcomeADDeploymentFailed:
 		return true
 	case OutcomePartiallyDeployed:
-		return false //not acceptable on an individual release, can only appear as result of Event.CombinedOutcome()
+		return false // not acceptable on an individual release, can only appear as result of Event.CombinedOutcome()
 	default:
 		return false
 	}
@@ -185,7 +185,7 @@ func (event Event) CombinedOutcome() Outcome {
 	for _, outcome := range allOutcomes {
 		switch outcome {
 		case OutcomeHelmUpgradeFailed, OutcomeE2ETestFailed, OutcomeTerraformRunFailed, OutcomeADDeploymentFailed:
-			//specific failure forces the entire result to be that failure
+			// specific failure forces the entire result to be that failure
 			return outcome
 		case OutcomeSucceeded:
 			hasSucceeded = true

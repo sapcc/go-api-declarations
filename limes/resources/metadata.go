@@ -35,21 +35,21 @@ type ResourceName string
 type ResourceInfo struct {
 	Name ResourceName `json:"name"`
 	Unit limes.Unit   `json:"unit,omitempty"`
-	//Category is an optional hint that UIs can use to group resources of one
-	//service into subgroups. If it is used, it should be set on all
-	//ResourceInfos reported by the same QuotaPlugin.
+	// Category is an optional hint that UIs can use to group resources of one
+	// service into subgroups. If it is used, it should be set on all
+	// ResourceInfos reported by the same QuotaPlugin.
 	Category string `json:"category,omitempty"`
-	//If AutoApproveInitialQuota is non-zero, when a new project is scraped for
-	//the first time, a backend quota equal to this value will be approved
-	//automatically (i.e. Quota will be set equal to BackendQuota).
+	// If AutoApproveInitialQuota is non-zero, when a new project is scraped for
+	// the first time, a backend quota equal to this value will be approved
+	// automatically (i.e. Quota will be set equal to BackendQuota).
 	AutoApproveInitialQuota uint64 `json:"-"`
-	//If NoQuota is true, quota is not tracked at all for this resource. The
-	//resource will only report usage. This field is not shown in API responses.
-	//Check `res.Quota == nil` instead.
+	// If NoQuota is true, quota is not tracked at all for this resource. The
+	// resource will only report usage. This field is not shown in API responses.
+	// Check `res.Quota == nil` instead.
 	NoQuota bool `json:"-"`
-	//ContainedIn is an optional hint that UIs can use to group resources. If non-empty,
-	//this resource is semantically contained within the resource with that name
-	//in the same service.
+	// ContainedIn is an optional hint that UIs can use to group resources. If non-empty,
+	// this resource is semantically contained within the resource with that name
+	// in the same service.
 	ContainedIn ResourceName `json:"contained_in,omitempty"`
 }
 

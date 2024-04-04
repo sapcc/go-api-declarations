@@ -69,14 +69,14 @@ func (r RateRequest) MarshalJSON() ([]byte, error) {
 			})
 		}
 
-		//ensure test reproducibility
+		// ensure test reproducibility
 		sort.Slice(sReq.Rates, func(i, j int) bool {
 			return sReq.Rates[i].Name < sReq.Rates[j].Name
 		})
 		list = append(list, sReq)
 	}
 
-	//ensure test reproducibility
+	// ensure test reproducibility
 	sort.Slice(list, func(i, j int) bool {
 		return list[i].Type < list[j].Type
 	})
@@ -91,7 +91,7 @@ func (r *RateRequest) UnmarshalJSON(input []byte) error {
 		return err
 	}
 
-	//remove existing content
+	// remove existing content
 	for key := range *r {
 		delete(*r, key)
 	}
@@ -99,7 +99,7 @@ func (r *RateRequest) UnmarshalJSON(input []byte) error {
 		*r = make(RateRequest, len(data))
 	}
 
-	//add new content
+	// add new content
 	for _, sReq := range data {
 		srvReq := make(ServiceRequest, len(sReq.Rates))
 
