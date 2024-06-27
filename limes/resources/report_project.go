@@ -71,8 +71,8 @@ type ProjectAZResourceReport struct {
 	PlannedCommitments map[string]uint64 `json:"planned_commitments,omitempty"`
 	Usage              uint64            `json:"usage"`
 	PhysicalUsage      *uint64           `json:"physical_usage,omitempty"`
-	MinHistoricalUsage string            `json:"min_historical_usage,omitempty"`
-	MaxHistorcialUsage string            `json:"max_historical_usage,omitempty"`
+	MinHistoricalUsage uint64            `json:"min_historical_usage,omitempty"`
+	MaxHistorcialUsage uint64            `json:"max_historical_usage,omitempty"`
 	Subresources       json.RawMessage   `json:"subresources,omitempty"`
 }
 
