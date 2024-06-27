@@ -76,8 +76,8 @@ type ProjectAZResourceReport struct {
 }
 
 type HistoricalReport struct {
-	MinUsage uint64 `json:"min_usage,omitempty"`
-	MaxUsage uint64 `json:"max_usage,omitempty"`
+	MinUsage uint64             `json:"min_usage,omitempty"`
+	MaxUsage uint64             `json:"max_usage,omitempty"`
 	Duration CommitmentDuration `json:"duration,omitempty"`
 }
 
