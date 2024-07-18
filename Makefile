@@ -23,6 +23,7 @@ prepare-static-check: FORCE
 GO_BUILDFLAGS =
 GO_LDFLAGS =
 GO_TESTENV =
+GO_BUILDENV =
 
 # which packages to test with test runner
 GO_TESTPKGS := $(shell go list -f '{{if or .TestGoFiles .XTestGoFiles}}{{.ImportPath}}{{end}}' ./...)
