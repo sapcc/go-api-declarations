@@ -68,6 +68,12 @@ type CommitmentRequest struct {
 	ConfirmBy        *limes.UnixEncodedTime `json:"confirm_by,omitempty"`
 }
 
+// CommitmentConversion is the API representation of a commitment that can be converted to another resource type.
+type CommitmentConversion struct {
+	Amount      uint64 `json:"amount"`
+	Convertible string `json:"convertible"`
+}
+
 // CommitmentTransferStatus is an enum.
 type CommitmentTransferStatus string
 
