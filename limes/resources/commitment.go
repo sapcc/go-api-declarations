@@ -73,7 +73,7 @@ type CommitmentRequest struct {
 type CommitmentConversion struct {
 	From           uint64 `json:"from"`
 	To             uint64 `json:"to"`
-	TargetResource string `json:"target_resource"`
+	TargetResource ResourceName `json:"target_resource"`
 }
 
 // CommitmentTransferStatus is an enum.
