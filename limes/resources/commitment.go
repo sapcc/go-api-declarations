@@ -69,8 +69,10 @@ type CommitmentRequest struct {
 }
 
 // CommitmentConversion is the API representation of a commitment that can be converted to another resource type.
+// From and To are used to represent the fracture of Up and Down conversions.
 type CommitmentConversion struct {
-	Amount      uint64 `json:"amount"`
+	From        uint64 `json:"from"`
+	To          uint64 `json:"to"`
 	Convertible string `json:"convertible"`
 }
 
