@@ -38,8 +38,8 @@ func assertConvertError(t *testing.T, from ValueWithUnit, to Unit, expectedError
 		t.Errorf("expected error when converting %s to %s, but found err == nil", from.String(), string(to))
 	case err.Error() != expectedError:
 		t.Errorf("unexpected error when converting %s to %s", from.String(), string(to))
-		t.Logf("  expected: " + expectedError)
-		t.Logf("    actual: " + err.Error())
+		t.Logf("  expected: %s", expectedError)
+		t.Logf("    actual: %s", err.Error())
 	}
 }
 
