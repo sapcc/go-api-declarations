@@ -50,7 +50,6 @@ type SizeSteps struct {
 type SizeConstraints struct {
 	Minimum               *uint64 `json:"minimum,omitempty" yaml:"minimum,omitempty"`
 	Maximum               *uint64 `json:"maximum,omitempty" yaml:"maximum,omitempty"`
-	MaximumIsCritical     bool    `json:"maximum_is_critical,omitempty" yaml:"maximum_is_critical,omitempty"`
 	MinimumFree           *uint64 `json:"minimum_free,omitempty" yaml:"minimum_free,omitempty"`
 	MinimumFreeIsCritical bool    `json:"minimum_free_is_critical,omitempty" yaml:"minimum_free_is_critical,omitempty"`
 }
