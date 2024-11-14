@@ -41,7 +41,7 @@ type ResourceDemand struct {
 	OvercommitFactor OvercommitFactor `json:"overcommitFactor,omitempty"`
 
 	// The actual demand values are AZ-aware.
-	// For non-AZ-aware resources, the only entry will be for AvailabilityZoneAny.
+	// The keys that can be expected in this map depend on the chosen ResourceTopology.
 	PerAZ map[AvailabilityZone]ResourceDemandInAZ `json:"perAZ"`
 }
 
@@ -77,11 +77,8 @@ type ServiceCapacityReport struct {
 // ResourceCapacityReport contains capacity data for a resource.
 // It appears in type ServiceCapacityReport.
 type ResourceCapacityReport struct {
-	// For non-AZ-aware resources, the only entry shall be for AvailabilityZoneAny.
-	// Use func InAnyAZ to quickly construct a suitable structure.
-	//
-	// For AZ-aware resources, there shall be an entry for each AZ mentioned in ServiceCapacityRequest.AllAZs.
-	// Reports for AZ-aware resources may also include an entry for AvailabilityZoneUnknown as needed.
+	// The keys that are allowed in this map depend on the chosen ResourceTopology.
+	// See documentation on ResourceTopology enum variants for details.
 	PerAZ map[AvailabilityZone]*AZResourceCapacityReport `json:"perAZ"`
 }
 

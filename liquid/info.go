@@ -63,6 +63,13 @@ type ResourceInfo struct {
 	// For example, the compute resource "cores" is countable, but the compute resource "ram" is measured, usually in MiB.
 	Unit Unit `json:"unit,omitempty"`
 
+	// How the resource reports usage (and capacity, if any).
+	//
+	// For backwards compatibility, it is currently acceptable to not provide this field.
+	// In this case, the fallback behavior is for Limes to decide between FlatResourceTopology and AZAwareResourceTopology based on actual reports.
+	// In the future, Limes will eventually reject ResourceInfo that do not specify a known ResourceTopology.
+	Topology ResourceTopology `json:"topology"`
+
 	// Whether the liquid reports capacity for this resource on the cluster level.
 	HasCapacity bool `json:"hasCapacity"`
 
@@ -80,6 +87,34 @@ type ResourceInfo struct {
 	// This must be shaped like a map[string]any, but is typed as a raw JSON message.
 	// Limes does not touch these attributes and will just pass them on into its users without deserializing it at all.
 	Attributes json.RawMessage `json:"attributes,omitempty"`
+}
+
+// ResourceTopology describes how capacity and usage reported by a certain resource is structured.
+// Type type appears in type ResourceInfo.
+type ResourceTopology string
+
+const (
+	// FlatResourceTopology is a topology for resources that are not AZ-aware at all.
+	// In reports for this resource, PerAZ must contain exactly one key: AvailabilityZoneAny.
+	// Any other entry, as well as the absence of AvailabilityZoneAny, will be considered an error by Limes.
+	FlatResourceTopology ResourceTopology = "flat"
+
+	// AZAwareResourceTopology is a topology for resources that are AZ-aware.
+	// In reports for this resource, PerAZ shall contain an entry for each AZ mentioned in the AllAZs key of the request.
+	// PerAZ may also include an entry for AvailabilityZoneUnknown as needed.
+	// Any other entry (including AvailabilityZoneAny) will be considered an error by Limes.
+	AZAwareResourceTopology ResourceTopology = "az-aware"
+)
+
+// IsValid returns whether the given value is a part of the enum.
+// This can be used to check unmarshalled values.
+func (t ResourceTopology) IsValid() bool {
+	switch t {
+	case FlatResourceTopology, AZAwareResourceTopology:
+		return true
+	default:
+		return false
+	}
 }
 
 // RateInfo describes a rate that a liquid's service provides.

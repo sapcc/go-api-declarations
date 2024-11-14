@@ -81,12 +81,10 @@ type ResourceUsageReport struct {
 	// A negative value, usually -1, indicates "infinite quota" (i.e., the absence of a quota).
 	Quota *int64 `json:"quota,omitempty"`
 
-	// For non-AZ-aware resources, the only entry shall be for AvailabilityZoneAny.
-	// Use func InAnyAZ to quickly construct a suitable structure.
+	// The keys that are allowed in this map depend on the chosen ResourceTopology.
+	// See documentation on ResourceTopology enum variants for details.
 	//
-	// For AZ-aware resources, there shall be an entry for each AZ mentioned in ServiceUsageRequest.AllAZs.
-	// Reports for AZ-aware resources may also include an entry for AvailabilityZoneUnknown as needed.
-	// When starting from a non-AZ-aware usage number that is later broken down with AZ-aware data, use func PrepareForBreakdownInto.
+	// Tip: When filling this by starting from a non-AZ-aware usage number that is later broken down with AZ-aware data, use func PrepareForBreakdownInto.
 	PerAZ map[AvailabilityZone]*AZResourceUsageReport `json:"perAZ"`
 }
 
@@ -148,11 +146,8 @@ func (r *ResourceUsageReport) AddLocalizedUsage(az AvailabilityZone, usage uint6
 // RateUsageReport contains usage data for a rate in a single project.
 // It appears in type ServiceUsageReport.
 type RateUsageReport struct {
-	// For non-AZ-aware rates, the only entry shall be for AvailabilityZoneAny.
-	// Use func InAnyAZ to quickly construct a suitable structure.
-	//
-	// For AZ-aware rates, there shall be an entry for each AZ mentioned in ServiceUsageRequest.AllAZs.
-	// Reports for AZ-aware rates may also include an entry for AvailabilityZoneUnknown as needed.
+	// The keys that are allowed in this map depend on the chosen ResourceTopology.
+	// See documentation on ResourceTopology enum variants for details.
 	PerAZ map[AvailabilityZone]*AZRateUsageReport `json:"perAZ"`
 }
 
