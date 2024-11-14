@@ -88,6 +88,20 @@ type ResourceCapacityReport struct {
 // AZResourceCapacityReport contains capacity data for a resource in a single AZ.
 // It appears in type ResourceCapacityReport.
 type AZResourceCapacityReport struct {
+	// How much capacity is available to Limes in this resource and AZ.
+	//
+	// Caution: In some cases, underlying capacity can be used by multiple
+	// resources. For example, the storage capacity in Manila pools can be used
+	// by both the `share_capacity` and `snapshot_capacity` resources. In this case,
+	// it is *incorrect* to just report the entire storage capacity in both resources.
+	// Limes assumes that whatever number you provide here is free to be
+	// allocated exclusively for the respective resource. If physical capacity
+	// can be used by multiple resources, you need to split the capacity and
+	// report only a chunk of the real capacity in each resource.
+	//
+	// If you need to split physical capacity between multiple resources like
+	// this, the recommended way is to set "NeedsResourceDemand = true" and
+	// then split capacity based on the demand reported by Limes.
 	Capacity uint64 `json:"capacity"`
 
 	// How much of the Capacity is used, or null if no usage data is available.

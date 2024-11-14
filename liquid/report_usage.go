@@ -73,7 +73,7 @@ type ServiceUsageReport struct {
 type ResourceUsageReport struct {
 	// If true, this project is forbidden from accessing this resource.
 	// This has two consequences:
-	//   - If the resource has quota, Limes will never try to assign quota for this resource to this project.
+	//   - If the resource has quota, Limes will never try to assign quota for this resource to this project except to cover existing usage.
 	//   - If the project has no usage in this resource, Limes will hide this resource from project reports.
 	Forbidden bool `json:"forbidden"`
 
