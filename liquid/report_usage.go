@@ -77,7 +77,7 @@ type ResourceUsageReport struct {
 	//   - If the project has no usage in this resource, Limes will hide this resource from project reports.
 	Forbidden bool `json:"forbidden"`
 
-	// This shall be null if and only if the resource is declared with "HasQuota = false".
+	// This shall be null if and only if the resource is declared with "HasQuota = false" or with AZSeparatedResourceTopology.
 	// A negative value, usually -1, indicates "infinite quota" (i.e., the absence of a quota).
 	Quota *int64 `json:"quota,omitempty"`
 
@@ -101,6 +101,10 @@ type AZResourceUsageReport struct {
 	// If a project has 5 shares, each with 10 GiB size and each containing 1 GiB data, then Usage = 50 GiB and PhysicalUsage = 5 GiB.
 	// It is not allowed to report 5 GiB as Usage in this situation, since the 50 GiB value is used when judging whether the Quota fits.
 	PhysicalUsage *uint64 `json:"physicalUsage,omitempty"`
+
+	// This shall be non-null if and only if the resource is declared with AZSeparatedResourceTopology.
+	// A negative value, usually -1, indicates "infinite quota" (i.e., the absence of a quota).
+	Quota *int64 `json:"quota,omitempty"`
 
 	// Only filled if the resource is able to report subresources for this usage in a useful way.
 	Subresources []Subresource `json:"subresources,omitempty"`

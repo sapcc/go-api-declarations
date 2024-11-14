@@ -97,20 +97,32 @@ const (
 	// FlatResourceTopology is a topology for resources that are not AZ-aware at all.
 	// In reports for this resource, PerAZ must contain exactly one key: AvailabilityZoneAny.
 	// Any other entry, as well as the absence of AvailabilityZoneAny, will be considered an error by Limes.
+	//
+	// If the resource sets HasQuota = true, only a flat number will be given, and PerAZ will be null.
 	FlatResourceTopology ResourceTopology = "flat"
 
-	// AZAwareResourceTopology is a topology for resources that are AZ-aware.
+	// AZAwareResourceTopology is a topology for resources that can measure capacity and usage by AZ.
 	// In reports for this resource, PerAZ shall contain an entry for each AZ mentioned in the AllAZs key of the request.
 	// PerAZ may also include an entry for AvailabilityZoneUnknown as needed.
 	// Any other entry (including AvailabilityZoneAny) will be considered an error by Limes.
+	//
+	// If the resource sets "HasQuota = true", only a flat number will be given, and PerAZ will be null.
+	// This behavior matches the AZ-unawareness of quota in most OpenStack services.
 	AZAwareResourceTopology ResourceTopology = "az-aware"
+
+	// AZSeparatedResourceTopology is like AZAwareResourceTopology, but quota is also AZ-aware.
+	// For resources with HasQuota = false, this behaves the same as AZAwareResourceTopology.
+	//
+	// If the resource sets "HasQuota = true", quota requests will include the PerAZ breakdown.
+	// PerAZ will only contain quotas for actual AZs, not for AvailabilityZoneAny or AvailabilityZoneUnknown.
+	AZSeparatedResourceTopology ResourceTopology = "az-separated"
 )
 
 // IsValid returns whether the given value is a part of the enum.
 // This can be used to check unmarshalled values.
 func (t ResourceTopology) IsValid() bool {
 	switch t {
-	case FlatResourceTopology, AZAwareResourceTopology:
+	case FlatResourceTopology, AZAwareResourceTopology, AZSeparatedResourceTopology:
 		return true
 	default:
 		return false
