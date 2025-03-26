@@ -39,7 +39,8 @@ import (
 func ValidateServiceInfo(srv ServiceInfo) error {
 	errs := validateServiceInfoImpl(srv)
 	if len(errs) > 0 {
-		return fmt.Errorf("received ServiceInfo is invalid: %s", errs.Join(", "))
+		// NOTE: Errors get joined with "; " instead of ", " because some errors contain commas themselves.
+		return fmt.Errorf("received ServiceInfo is invalid: %s", errs.Join("; "))
 	}
 	return nil
 }
@@ -79,7 +80,8 @@ func validateServiceInfoImpl(srv ServiceInfo) (errs errorset.ErrorSet) {
 func ValidateCapacityReport(report ServiceCapacityReport, req ServiceCapacityRequest, info ServiceInfo) error {
 	errs := validateCapacityReportImpl(report, req, info)
 	if len(errs) > 0 {
-		return fmt.Errorf("received ServiceCapacityReport is invalid: %s", errs.Join(", "))
+		// NOTE: Errors get joined with "; " instead of ", " because some errors contain commas themselves.
+		return fmt.Errorf("received ServiceCapacityReport is invalid: %s", errs.Join("; "))
 	}
 	return nil
 }
@@ -141,7 +143,8 @@ func validateCapacityReportImpl(report ServiceCapacityReport, req ServiceCapacit
 func ValidateUsageReport(report ServiceUsageReport, req ServiceUsageRequest, info ServiceInfo) error {
 	errs := validateUsageReportImpl(report, req, info)
 	if len(errs) > 0 {
-		return fmt.Errorf("received ServiceUsageReport is invalid: %s", errs.Join(", "))
+		// NOTE: Errors get joined with "; " instead of ", " because some errors contain commas themselves.
+		return fmt.Errorf("received ServiceUsageReport is invalid: %s", errs.Join("; "))
 	}
 	return nil
 }
