@@ -257,7 +257,7 @@ func TestValidateUsageReport(t *testing.T) {
 			},
 			"baz": {
 				PerAZ: map[AvailabilityZone]*AZResourceUsageReport{
-					"any": {Usage: 42}, // Report for resource with HasCapacity=false
+					"az-one": {Usage: 42, Quota: p2i64(100)}, // Quota reporting on AZ level despite HasQuota = false
 				},
 			},
 			"qux": {
@@ -308,10 +308,11 @@ func TestValidateUsageReport(t *testing.T) {
 		},
 	}
 	expectedErrStrings := []string{
-		`missing value for .Resources["foo"] (resource was declared with HasQuota = true)`,
+		`missing value for .Resources["foo"]`,
 		`.Resources["bar"].PerAZ has entries for []liquid.AvailabilityZone{"az-one", "az-two"}, which is invalid for topology "flat" (expected entries for []liquid.AvailabilityZone{"any"})`,
 		`.Resources["bar"] has no quota reported on resource level, which is invalid for HasQuota = true and topology "flat"`,
-		`unexpected value for .Resources["baz"] (resource was declared with HasQuota = false)`,
+		`.Resources["baz"].PerAZ has entries for []liquid.AvailabilityZone{"az-one"}, which is invalid for topology "flat" (expected entries for []liquid.AvailabilityZone{"any"})`,
+		`.Resources["baz"] has quota reported on AZ level, which is invalid for HasQuota = false`,
 		`.Resources["qux"].PerAZ has entries for []liquid.AvailabilityZone{"any"}, which is invalid for topology "az-separated" (expected entries for []liquid.AvailabilityZone{"az-one", "az-two"})`,
 		`.Resources["qux"] has quota reported on resource level, which is invalid for topology "az-separated"`,
 		`.Resources["quux"].PerAZ has entries for []liquid.AvailabilityZone{"az-one"}, which is invalid for topology "az-separated" (expected entries for []liquid.AvailabilityZone{"az-one", "az-two"})`,
@@ -329,6 +330,81 @@ func TestValidateUsageReport(t *testing.T) {
 	errs = validateUsageReportImpl(invalidServiceUsageReport, serviceUsageRequest, serviceInfo)
 	assertErrorSet(t, errs, expectedErrStrings)
 
+	// More test cases regarding quota reporting
+	invalidServiceUsageReport2 := ServiceUsageReport{
+		InfoVersion: 73,
+		Resources: map[ResourceName]*ResourceUsageReport{
+			"foo": {
+				Quota: p2i64(100),
+				PerAZ: map[AvailabilityZone]*AZResourceUsageReport{
+					"az-one": {Usage: 42},
+					"az-two": {Usage: 42, Quota: p2i64(100)}, // Quota reporting on AZ level instead of resource level
+				},
+			},
+			"bar": {
+				Quota: p2i64(100),
+				PerAZ: map[AvailabilityZone]*AZResourceUsageReport{
+					"any": {Usage: 42},
+				},
+			},
+			"baz": {
+				Quota: p2i64(100), // Quota reporting on resource level despite HasQuota = false
+				PerAZ: map[AvailabilityZone]*AZResourceUsageReport{
+					"any": {Usage: 42, Quota: p2i64(100)}, // Quota reporting on AZ level despite HasQuota = false
+				},
+			},
+			"qux": {
+				PerAZ: map[AvailabilityZone]*AZResourceUsageReport{
+					"unknown": {Usage: 42, Quota: p2i64(100)}, // Quota reporting in AZ "unknown"
+					"az-one":  {Usage: 42, Quota: p2i64(100)},
+					"az-two":  {Usage: 42, Quota: p2i64(100)},
+				},
+			},
+			"quux": {
+				PerAZ: map[AvailabilityZone]*AZResourceUsageReport{
+					"az-one": {Usage: 42, Quota: p2i64(100)},
+					"az-two": {Usage: 42, Quota: p2i64(100)},
+				},
+			},
+		},
+		Rates: map[RateName]*RateUsageReport{
+			"corge": {
+				PerAZ: map[AvailabilityZone]*AZRateUsageReport{
+					"az-one": {Usage: big.NewInt(5)},
+					"az-two": {Usage: big.NewInt(5)},
+				},
+			},
+			"grault": {
+				PerAZ: map[AvailabilityZone]*AZRateUsageReport{
+					"any": {Usage: big.NewInt(5)},
+				},
+			},
+			"garply": {
+				PerAZ: map[AvailabilityZone]*AZRateUsageReport{
+					"az-one": {Usage: big.NewInt(5)},
+					"az-two": {Usage: big.NewInt(5)},
+				},
+			},
+			"waldo": {
+				PerAZ: map[AvailabilityZone]*AZRateUsageReport{
+					"az-one": {Usage: big.NewInt(5)},
+					"az-two": {Usage: big.NewInt(5)},
+				},
+			},
+		},
+		Metrics: map[MetricName][]Metric{
+			"usageMetric1": {Metric{Value: 42, LabelValues: []string{"val1", "val2"}}},
+			"usageMetric2": {Metric{Value: 42, LabelValues: []string{"val1", "val2"}}},
+		},
+	}
+	expectedErrStrings = []string{
+		`.Resources["foo"] has quota reported on AZ level, which is invalid for topology "az-aware"`,
+		`.Resources["baz"] has quota reported on resource level, which is invalid for HasQuota = false`,
+		`.Resources["qux"] reports quota in AZ "unknown", which is invalid for topology "az-separated"`,
+	}
+	errs = validateUsageReportImpl(invalidServiceUsageReport2, serviceUsageRequest, serviceInfo)
+	assertErrorSet(t, errs, expectedErrStrings)
+
 	serviceUsageReport := ServiceUsageReport{
 		InfoVersion: 73,
 		Resources: map[ResourceName]*ResourceUsageReport{
@@ -343,6 +419,11 @@ func TestValidateUsageReport(t *testing.T) {
 				Quota: p2i64(100),
 				PerAZ: map[AvailabilityZone]*AZResourceUsageReport{
 					"any": {Usage: 42},
+				},
+			},
+			"baz": {
+				PerAZ: map[AvailabilityZone]*AZResourceUsageReport{
+					"any": {Usage: 42}, // Report for resource declared with HasQuota = false. This should be allowed since we also need reports for resources that only report usage
 				},
 			},
 			"qux": {

@@ -161,19 +161,15 @@ func validateUsageReportImpl(report ServiceUsageReport, req ServiceUsageRequest,
 	errs.Append(validateMetrics(report.Metrics, info.UsageMetricFamilies, ".UsageMetricFamilies"))
 
 	// validate resource reports
-	for resName, resInfo := range info.Resources {
-		if resInfo.HasQuota && !hasKey(report.Resources, resName) {
-			errs.Addf("missing value for .Resources[%q] (resource was declared with HasQuota = true)", resName)
+	for resName := range info.Resources {
+		if !hasKey(report.Resources, resName) {
+			errs.Addf("missing value for .Resources[%q]", resName)
 		}
 	}
 	for resName, res := range report.Resources {
 		resInfo, exists := info.Resources[resName]
 		if !exists {
 			errs.Addf("unexpected value for .Resources[%q] (resource was not declared)", resName)
-			continue
-		}
-		if !resInfo.HasQuota {
-			errs.Addf("unexpected value for .Resources[%q] (resource was declared with HasQuota = false)", resName)
 			continue
 		}
 		errs.Add(validatePerAZAgainstTopology(res.PerAZ, resInfo.Topology, ".Resources", resName, req.AllAZs))
@@ -275,13 +271,24 @@ func validateQuotaAgainstTopology(report *ResourceUsageReport, hasQuota bool, to
 			continue
 		}
 		// azReport.Quota shall be non-null if and only if the resource is declared with AZSeparatedTopology
-		if azReport.Quota != nil && hasQuota && topology != AZSeparatedTopology {
-			return fmt.Errorf(".Resources[%q] has quota reported on AZ level, which is invalid for topology %q", name, topology)
+		if azReport.Quota != nil {
+			if !hasQuota {
+				return fmt.Errorf(".Resources[%q] has quota reported on AZ level, which is invalid for HasQuota = false", name)
+			}
+			if topology != AZSeparatedTopology {
+				return fmt.Errorf(".Resources[%q] has quota reported on AZ level, which is invalid for topology %q", name, topology)
+			}
 		}
 	}
-	// If declared with AZSeparatedTopology, quota needs to be reported for all AZs
-	if len(allAZsWithoutQuota) > 0 && hasQuota && topology == AZSeparatedTopology {
-		return fmt.Errorf(".Resources[%q] with topology %q is missing quota reports on the following AZs: %s", name, topology, strings.Join(allAZsWithoutQuota, ", "))
+	// If declared with AZSeparatedTopology, quota needs to be reported for all real AZs (not for AvailabilityZoneUnknown)
+	if hasQuota && topology == AZSeparatedTopology {
+		if len(allAZsWithoutQuota) > 0 {
+			return fmt.Errorf(".Resources[%q] with topology %q is missing quota reports on the following AZs: %s", name, topology, strings.Join(allAZsWithoutQuota, ", "))
+		}
+		azReport, exists := report.PerAZ[AvailabilityZoneUnknown]
+		if exists && azReport.Quota != nil {
+			return fmt.Errorf(".Resources[%q] reports quota in AZ %q, which is invalid for topology %q", name, AvailabilityZoneUnknown, topology)
+		}
 	}
 	return nil
 }
