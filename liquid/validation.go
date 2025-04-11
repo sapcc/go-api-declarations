@@ -52,8 +52,7 @@ func validateServiceInfoImpl(srv ServiceInfo) (errs errorset.ErrorSet) {
 		}
 	}
 
-	sortedRateInfos := slices.Sorted(maps.Keys(srv.Rates))
-	for _, rateName := range sortedRateInfos {
+	for _, rateName := range slices.Sorted(maps.Keys(srv.Rates)) {
 		if !srv.Rates[rateName].Topology.IsValid() {
 			errs.Addf(".Rates[%q] has invalid topology %q", rateName, srv.Rates[rateName].Topology)
 		}
