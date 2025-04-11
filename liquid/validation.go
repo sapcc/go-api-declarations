@@ -46,17 +46,19 @@ func ValidateServiceInfo(srv ServiceInfo) error {
 }
 
 func validateServiceInfoImpl(srv ServiceInfo) (errs errorset.ErrorSet) {
-	for resName, resInfo := range srv.Resources {
-		if !resInfo.Topology.IsValid() {
-			errs.Addf(".Resources[%q] has invalid topology %q", resName, resInfo.Topology)
+	sortedResourceKeys := slices.Sorted(maps.Keys(srv.Resources))
+	for _, resName := range sortedResourceKeys {
+		if !srv.Resources[resName].Topology.IsValid() {
+			errs.Addf(".Resources[%q] has invalid topology %q", resName, srv.Resources[resName].Topology)
 		}
 	}
 
-	for rateName, rateInfo := range srv.Rates {
-		if !rateInfo.Topology.IsValid() {
-			errs.Addf(".Rates[%q] has invalid topology %q", rateName, rateInfo.Topology)
+	sortedRateInfos := slices.Sorted(maps.Keys(srv.Rates))
+	for _, rateName := range sortedRateInfos {
+		if !srv.Rates[rateName].Topology.IsValid() {
+			errs.Addf(".Rates[%q] has invalid topology %q", rateName, srv.Rates[rateName].Topology)
 		}
-		if !rateInfo.HasUsage {
+		if !srv.Rates[rateName].HasUsage {
 			errs.Addf(".Rates[%q] declared with HasUsage = false, but must be true", rateName)
 		}
 	}
