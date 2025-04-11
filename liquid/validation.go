@@ -46,8 +46,7 @@ func ValidateServiceInfo(srv ServiceInfo) error {
 }
 
 func validateServiceInfoImpl(srv ServiceInfo) (errs errorset.ErrorSet) {
-	sortedResourceKeys := slices.Sorted(maps.Keys(srv.Resources))
-	for _, resName := range sortedResourceKeys {
+	for _, resName := range slices.Sorted(maps.Keys(srv.Resources)) {
 		if !srv.Resources[resName].Topology.IsValid() {
 			errs.Addf(".Resources[%q] has invalid topology %q", resName, srv.Resources[resName].Topology)
 		}
