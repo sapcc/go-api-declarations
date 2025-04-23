@@ -25,6 +25,8 @@ import (
 	"strings"
 	"testing"
 
+	. "github.com/majewsky/gg/option"
+
 	"github.com/sapcc/go-api-declarations/internal/errorset"
 )
 
@@ -251,24 +253,24 @@ func TestValidateUsageReport(t *testing.T) {
 			// foo is missing
 			"bar": {
 				PerAZ: map[AvailabilityZone]*AZResourceUsageReport{
-					"az-one": {Usage: 42, Quota: p2i64(100)}, // AZ aware reporting on resource with flat topology
-					"az-two": {Usage: 42, Quota: p2i64(100)}, // Quota reporting on AZ level instead of resource level
+					"az-one": {Usage: 42, Quota: Some[int64](100)}, // AZ aware reporting on resource with flat topology
+					"az-two": {Usage: 42, Quota: Some[int64](100)}, // Quota reporting on AZ level instead of resource level
 				},
 			},
 			"baz": {
 				PerAZ: map[AvailabilityZone]*AZResourceUsageReport{
-					"az-one": {Usage: 42, Quota: p2i64(100)}, // Quota reporting on AZ level despite HasQuota = false
+					"az-one": {Usage: 42, Quota: Some[int64](100)}, // Quota reporting on AZ level despite HasQuota = false
 				},
 			},
 			"qux": {
-				Quota: p2i64(100), // Quota reporting on resource level instead of AZ level
+				Quota: Some[int64](100), // Quota reporting on resource level instead of AZ level
 				PerAZ: map[AvailabilityZone]*AZResourceUsageReport{
 					"any": {Usage: 42}, // Flat reporting for AZ aware resource
 				},
 			},
 			"quux": {
 				PerAZ: map[AvailabilityZone]*AZResourceUsageReport{
-					"az-one": {Quota: p2i64(100), Usage: 42}, // Partial AZ aware reporting, az-two is missing
+					"az-one": {Quota: Some[int64](100), Usage: 42}, // Partial AZ aware reporting, az-two is missing
 				},
 			},
 			"unknown": {
@@ -281,23 +283,23 @@ func TestValidateUsageReport(t *testing.T) {
 			// corge is missing
 			"grault": {
 				PerAZ: map[AvailabilityZone]*AZRateUsageReport{
-					"az-one": {Usage: big.NewInt(5)}, // AZ aware reporting on rate with flat topology
-					"az-two": {Usage: big.NewInt(5)},
+					"az-one": {Usage: Some(big.NewInt(5))}, // AZ aware reporting on rate with flat topology
+					"az-two": {Usage: Some(big.NewInt(5))},
 				},
 			},
 			"garply": {
 				PerAZ: map[AvailabilityZone]*AZRateUsageReport{
-					"any": {Usage: big.NewInt(5)}, // Flat reporting for AZ aware rate
+					"any": {Usage: Some(big.NewInt(5))}, // Flat reporting for AZ aware rate
 				},
 			},
 			"waldo": {
 				PerAZ: map[AvailabilityZone]*AZRateUsageReport{
-					"az-one": {Usage: big.NewInt(5)}, // Partial AZ aware reporting, az-two is missing
+					"az-one": {Usage: Some(big.NewInt(5))}, // Partial AZ aware reporting, az-two is missing
 				},
 			},
 			"unknown": {
 				PerAZ: map[AvailabilityZone]*AZRateUsageReport{
-					"any": {Usage: big.NewInt(5)}, // Report for rate which is not in ServiceInfo
+					"any": {Usage: Some(big.NewInt(5))}, // Report for rate which is not in ServiceInfo
 				},
 			},
 		},
@@ -335,60 +337,60 @@ func TestValidateUsageReport(t *testing.T) {
 		InfoVersion: 73,
 		Resources: map[ResourceName]*ResourceUsageReport{
 			"foo": {
-				Quota: p2i64(100),
+				Quota: Some[int64](100),
 				PerAZ: map[AvailabilityZone]*AZResourceUsageReport{
 					"az-one": {Usage: 42},
-					"az-two": {Usage: 42, Quota: p2i64(100)}, // Quota reporting on AZ level instead of resource level
+					"az-two": {Usage: 42, Quota: Some[int64](100)}, // Quota reporting on AZ level instead of resource level
 				},
 			},
 			"bar": {
-				Quota: p2i64(100),
+				Quota: Some[int64](100),
 				PerAZ: map[AvailabilityZone]*AZResourceUsageReport{
 					"any": {Usage: 42},
 				},
 			},
 			"baz": {
-				Quota: p2i64(100), // Quota reporting on resource level despite HasQuota = false
+				Quota: Some[int64](100), // Quota reporting on resource level despite HasQuota = false
 				PerAZ: map[AvailabilityZone]*AZResourceUsageReport{
-					"any": {Usage: 42, Quota: p2i64(100)}, // Quota reporting on AZ level despite HasQuota = false
+					"any": {Usage: 42, Quota: Some[int64](100)}, // Quota reporting on AZ level despite HasQuota = false
 				},
 			},
 			"qux": {
 				PerAZ: map[AvailabilityZone]*AZResourceUsageReport{
-					"unknown": {Usage: 42, Quota: p2i64(100)}, // Quota reporting in AZ "unknown"
-					"az-one":  {Usage: 42, Quota: p2i64(100)},
-					"az-two":  {Usage: 42, Quota: p2i64(100)},
+					"unknown": {Usage: 42, Quota: Some[int64](100)}, // Quota reporting in AZ "unknown"
+					"az-one":  {Usage: 42, Quota: Some[int64](100)},
+					"az-two":  {Usage: 42, Quota: Some[int64](100)},
 				},
 			},
 			"quux": {
 				PerAZ: map[AvailabilityZone]*AZResourceUsageReport{
-					"az-one": {Usage: 42, Quota: p2i64(100)},
-					"az-two": {Usage: 42, Quota: p2i64(100)},
+					"az-one": {Usage: 42, Quota: Some[int64](100)},
+					"az-two": {Usage: 42, Quota: Some[int64](100)},
 				},
 			},
 		},
 		Rates: map[RateName]*RateUsageReport{
 			"corge": {
 				PerAZ: map[AvailabilityZone]*AZRateUsageReport{
-					"az-one": {Usage: big.NewInt(5)},
-					"az-two": {Usage: big.NewInt(5)},
+					"az-one": {Usage: Some(big.NewInt(5))},
+					"az-two": {Usage: Some(big.NewInt(5))},
 				},
 			},
 			"grault": {
 				PerAZ: map[AvailabilityZone]*AZRateUsageReport{
-					"any": {Usage: big.NewInt(5)},
+					"any": {Usage: Some(big.NewInt(5))},
 				},
 			},
 			"garply": {
 				PerAZ: map[AvailabilityZone]*AZRateUsageReport{
-					"az-one": {Usage: big.NewInt(5)},
-					"az-two": {Usage: big.NewInt(5)},
+					"az-one": {Usage: Some(big.NewInt(5))},
+					"az-two": {Usage: Some(big.NewInt(5))},
 				},
 			},
 			"waldo": {
 				PerAZ: map[AvailabilityZone]*AZRateUsageReport{
-					"az-one": {Usage: big.NewInt(5)},
-					"az-two": {Usage: big.NewInt(5)},
+					"az-one": {Usage: None[*big.Int]()},    // Usage missing for rate with HasUsage = true
+					"az-two": {Usage: Some[*big.Int](nil)}, // Usage value not intact
 				},
 			},
 		},
@@ -401,6 +403,8 @@ func TestValidateUsageReport(t *testing.T) {
 		`.Resources["foo"] has quota reported on AZ level, which is invalid for topology "az-aware"`,
 		`.Resources["baz"] has quota reported on resource level, which is invalid for HasQuota = false`,
 		`.Resources["qux"] reports quota in AZ "unknown", which is invalid for topology "az-separated"`,
+		`missing value for .Rates["waldo"].PerAZ["az-one"].Usage (rate was declared with HasUsage = true)`,
+		`unexpected nil value in payload of .Rates["waldo"].PerAZ["az-two"].Usage`,
 	}
 	errs = validateUsageReportImpl(invalidServiceUsageReport2, serviceUsageRequest, serviceInfo)
 	assertErrorSet(t, errs, expectedErrStrings)
@@ -409,14 +413,14 @@ func TestValidateUsageReport(t *testing.T) {
 		InfoVersion: 73,
 		Resources: map[ResourceName]*ResourceUsageReport{
 			"foo": {
-				Quota: p2i64(100),
+				Quota: Some[int64](100),
 				PerAZ: map[AvailabilityZone]*AZResourceUsageReport{
 					"az-one": {Usage: 42},
 					"az-two": {Usage: 42},
 				},
 			},
 			"bar": {
-				Quota: p2i64(100),
+				Quota: Some[int64](100),
 				PerAZ: map[AvailabilityZone]*AZResourceUsageReport{
 					"any": {Usage: 42},
 				},
@@ -428,39 +432,39 @@ func TestValidateUsageReport(t *testing.T) {
 			},
 			"qux": {
 				PerAZ: map[AvailabilityZone]*AZResourceUsageReport{
-					"az-one": {Usage: 42, Quota: p2i64(100)},
-					"az-two": {Usage: 42, Quota: p2i64(100)},
+					"az-one": {Usage: 42, Quota: Some[int64](100)},
+					"az-two": {Usage: 42, Quota: Some[int64](100)},
 				},
 			},
 			"quux": {
 				PerAZ: map[AvailabilityZone]*AZResourceUsageReport{
-					"az-one": {Usage: 42, Quota: p2i64(100)},
-					"az-two": {Usage: 42, Quota: p2i64(100)},
+					"az-one": {Usage: 42, Quota: Some[int64](100)},
+					"az-two": {Usage: 42, Quota: Some[int64](100)},
 				},
 			},
 		},
 		Rates: map[RateName]*RateUsageReport{
 			"corge": {
 				PerAZ: map[AvailabilityZone]*AZRateUsageReport{
-					"az-one": {Usage: big.NewInt(5)},
-					"az-two": {Usage: big.NewInt(5)},
+					"az-one": {Usage: Some(big.NewInt(5))},
+					"az-two": {Usage: Some(big.NewInt(5))},
 				},
 			},
 			"grault": {
 				PerAZ: map[AvailabilityZone]*AZRateUsageReport{
-					"any": {Usage: big.NewInt(5)},
+					"any": {Usage: Some(big.NewInt(5))},
 				},
 			},
 			"garply": {
 				PerAZ: map[AvailabilityZone]*AZRateUsageReport{
-					"az-one": {Usage: big.NewInt(5)},
-					"az-two": {Usage: big.NewInt(5)},
+					"az-one": {Usage: Some(big.NewInt(5))},
+					"az-two": {Usage: Some(big.NewInt(5))},
 				},
 			},
 			"waldo": {
 				PerAZ: map[AvailabilityZone]*AZRateUsageReport{
-					"az-one": {Usage: big.NewInt(5)},
-					"az-two": {Usage: big.NewInt(5)},
+					"az-one": {Usage: Some(big.NewInt(5))},
+					"az-two": {Usage: Some(big.NewInt(5))},
 				},
 			},
 		},
@@ -491,9 +495,4 @@ func assertErrorSet(t *testing.T, actualErrorSet errorset.ErrorSet, expectedErrS
 			t.Errorf("unexpected error: %s", actualErrStr)
 		}
 	}
-}
-
-// p2i64 makes a "pointer to int64".
-func p2i64(val int64) *int64 {
-	return &val
 }
