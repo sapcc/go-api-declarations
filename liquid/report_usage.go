@@ -79,7 +79,7 @@ type ResourceUsageReport struct {
 	//   - If the project has no usage in this resource, Limes will hide this resource from project reports.
 	Forbidden bool `json:"forbidden"`
 
-	// This shall be null if and only if the resource is declared with "HasQuota = false" or with AZSeparatedTopology.
+	// This shall be None if and only if the resource is declared with "HasQuota = false" or with AZSeparatedTopology.
 	// A negative value, usually -1, indicates "infinite quota" (i.e., the absence of a quota).
 	Quota Option[int64] `json:"quota,omitzero"`
 
