@@ -114,3 +114,13 @@ const (
 	// Expired commitments can be renewed by the user manually, but that involves creating a new commitment separately, such that ConfirmBy of the new commitment is equal to ExpiresAt of the old commitment.
 	CommitmentStatusExpired CommitmentStatus = "expired"
 )
+
+// IsValid returns whether the given status is one of the predefined enum variants.
+func (s CommitmentStatus) IsValid() bool {
+	switch s {
+	case CommitmentStatusPlanned, CommitmentStatusPending, CommitmentStatusConfirmed, CommitmentStatusSuperseded, CommitmentStatusExpired:
+		return true
+	default:
+		return false
+	}
+}
