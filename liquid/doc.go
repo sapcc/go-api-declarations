@@ -52,9 +52,11 @@
 //
 // If configured in Limes, resources may allow for commitments to be created.
 // Within the context of LIQUID, a commitment represents a guarantee by the cloud platform that a specific project can provision a guaranteed minimum amount of a resource.
-// For example, if a project currently has a usage of 8 and for the resource "network/routers", taking out a commitment for 10 routers would mean that the cloud guarantees that this project can provision 10 - 8 = 2 additional routers in the future.
+// For example, if a project currently has a usage of 8 for the resource "network/routers", taking out a commitment for 10 routers would mean that the cloud guarantees that this project can provision 10 - 8 = 2 additional routers in the future.
+// Usage that is covered by a commitment shall turn back into a reservation when the corresponding objects are decommissioned.
+// For example, continuing the previous scenario, if the project with a commitment for 10 routers deletes 2 of their 8 routers, then the cloud shall guarantee that this project can provision 10 - 6 = 4 additional routers in the future.
 //
-// Each commitments refers to some amount of a resource being reserved for a specific project in a certain AZ.
+// Each commitment refers to some amount of a resource being reserved for a specific project in a certain AZ.
 // Multiple commitments can be active at the same time for the same project, resource and AZ, in which case the guaranteed-deployable amount of resource will be equal to the sum of all active commitments.
 //
 // By default, resources in LIQUID do not care about commitments at all, and Limes will manage commitments purely based on the numbers provided by the liquid:
