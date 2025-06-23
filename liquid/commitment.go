@@ -13,6 +13,11 @@ import (
 type CommitmentChangeRequest struct {
 	AZ AvailabilityZone `json:"az"`
 
+	// The same version number that was reported in the Version field of a GET /v1/info response.
+	// The liquid shall reject this request if the version here differs from the value in the ServiceInfo currently held by the liquid.
+	// This is used to ensure that Limes does not request commitment changes based on outdated resource metadata.
+	InfoVersion uint64 `json:"infoVersion"`
+
 	// On the first level, the commitment changeset is grouped by project.
 	//
 	// Changesets may span over multiple projects e.g. when moving commitments from one project to another.
