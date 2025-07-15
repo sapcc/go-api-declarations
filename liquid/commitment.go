@@ -102,7 +102,7 @@ type Commitment struct {
 	ConfirmBy Option[time.Time] `json:"confirmBy,omitzero"`
 
 	// This field contains the point in time when the commitment moves into status "expired", unless it is deleted or moves into status "superseded" first.
-	ExpiresAt time.Time `json:"expiresAt,omitzero"`
+	ExpiresAt time.Time `json:"expiresAt"`
 }
 
 // CommitmentStatus is an enum containing the various lifecycle states of type Commitment.
