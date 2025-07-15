@@ -88,7 +88,7 @@ type Commitment struct {
 	// These two status fields communicate one of three possibilities:
 	//   - If OldStatus.IsNone() and NewStatus.IsSome(), the commitment is being created (or moved to this location).
 	//   - If OldStatus.IsSome() and NewStatus.IsNone(), the commitment is being deleted (or moved away from this location).
-	//   - If OldStatus.IsSome() and NewStatus.IsSome(), the commitment is only changing its status (e.g. from "active" to "expired" when ExpiresAt has passed).
+	//   - If OldStatus.IsSome() and NewStatus.IsSome(), the commitment is only changing its status (e.g. from "confirmed" to "expired" when ExpiresAt has passed).
 	OldStatus Option[CommitmentStatus] `json:"oldStatus"`
 	NewStatus Option[CommitmentStatus] `json:"newStatus"`
 
@@ -97,8 +97,8 @@ type Commitment struct {
 	// For commitments in status "planned", this field contains the point in time in the future when the user wants for it to move into status "confirmed".
 	// If confirmation is not possible by that point in time, the commitment will move into status "pending" until it can be confirmed.
 	//
-	// For all other status values, this field contains the point in time when the status transitioned from "active" to "pending",
-	// or None() if the commitment was created for immediate confirmation and therefore started in status "pending".
+	// For all other status values, this field contains the point in time when the status transitioned into status "confirmed",
+	// or None() if the commitment was created for immediate confirmation and therefore started in status "confirmed".
 	ConfirmBy Option[time.Time] `json:"confirmBy,omitzero"`
 
 	// This field contains the point in time when the commitment moves into status "expired", unless it is deleted or moves into status "superseded" first.
@@ -106,6 +106,13 @@ type Commitment struct {
 }
 
 // CommitmentStatus is an enum containing the various lifecycle states of type Commitment.
+// The following state transitions are allowed:
+//
+//	start = "planned" -> "pending" -> "confirmed"   // normal commitment that takes effect after the ConfirmBy date
+//	start = "guaranteed" -> "confirmed"             // pre-confirmed commitment that takes effect at the ConfirmBy date
+//	start = "confirmed"                             // commitment that takes effect right away (ConfirmBy = nil)
+//	anyNonFinal -> "expired" = final                // commitment stops taking effect after ExpiresAt
+//	anyNonFinal -> "superseded" = final             // commitment stops taking effect if replaced by other commitments
 type CommitmentStatus string
 
 const (
@@ -114,7 +121,7 @@ const (
 	// The cloud has not committed to fulfilling this resource demand in the future.
 	CommitmentStatusPlanned CommitmentStatus = "planned"
 	// CommitmentStatusPending means that the commitment has a ConfirmBy date in the past, but the cloud has not confirmed it yet.
-	// Pending commitments usually occur when there is not enough capacity to cover all current resource demands.
+	// Pending commitments usually only stick around when there is not enough capacity to cover all current resource demands.
 	CommitmentStatusPending CommitmentStatus = "pending"
 	// CommitmentStatusGuaranteed means that the commitment has a ConfirmBy date in the future.
 	// Similar to CommitmentStatusPlanned, this type of commitment notifies the cloud about future resource demand.
@@ -145,7 +152,7 @@ func (s CommitmentStatus) IsValid() bool {
 // RequiresConfirmation describes if this request requires confirmation from the liquid.
 // The RejectionReason in type CommitmentChangeResponse may only be used if this returns true.
 //
-// Examples for RequiresConfirmation = true include commitments moving into the "guaranteed" or "confirmed" statuses, or conversion of commitments between resources.
+// Examples for RequiresConfirmation = true include commitments moving into or spawning in the "guaranteed" or "confirmed" statuses, or conversion of commitments between resources.
 // Examples for RequiresConfirmation = false include commitments being split or moving into the "expired" status.
 func (req CommitmentChangeRequest) RequiresConfirmation() bool {
 	// the request requires confirmation if any one ResourceCommitmentChangeset does
