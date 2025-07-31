@@ -95,23 +95,27 @@ var serviceInfo = ServiceInfo{
 func TestValidateServiceInfo(t *testing.T) {
 	invalidServiceInfo := ServiceInfo{
 		Resources: map[ResourceName]ResourceInfo{
-			"foo": {}, // Topology is missing
-			"bar": {Topology: "InvalidTopology"},
-			"baz": {Topology: AZSeparatedTopology},
+			"foo":         {}, // Topology is missing
+			"bar":         {Topology: "InvalidTopology"},
+			"baz":         {Topology: AZSeparatedTopology},
+			"foo+private": {Topology: FlatTopology}, // Invalid name
 		},
 		Rates: map[RateName]RateInfo{
-			"corge":  {HasUsage: true}, // Topology is missing
-			"grault": {HasUsage: true, Topology: "InvalidTopology"},
-			"garply": {HasUsage: false, Topology: AZSeparatedTopology}, // HasUsage = false is not allowed
-			"waldo":  {HasUsage: true, Topology: AZSeparatedTopology},
+			"corge":      {HasUsage: true}, // Topology is missing
+			"grault":     {HasUsage: true, Topology: "InvalidTopology"},
+			"garply":     {HasUsage: false, Topology: AZSeparatedTopology}, // HasUsage = false is not allowed
+			"waldo":      {HasUsage: true, Topology: AZSeparatedTopology},
+			"foo/create": {HasUsage: true, Topology: FlatTopology}, // Invalid name
 		},
 	}
 	expectedErrStrings := []string{
 		`.Resources["foo"] has invalid topology ""`,
 		`.Resources["bar"] has invalid topology "InvalidTopology"`,
+		`.Resources["foo+private"] has invalid name (must match /^[a-zA-Z][a-zA-Z0-9._-]*$/)`,
 		`.Rates["corge"] has invalid topology ""`,
 		`.Rates["grault"] has invalid topology "InvalidTopology"`,
 		`.Rates["garply"] declared with HasUsage = false, but must be true`,
+		`.Rates["foo/create"] has invalid name (must match /^[a-zA-Z][a-zA-Z0-9._-]*$/)`,
 	}
 	errs := validateServiceInfoImpl(invalidServiceInfo)
 	assertErrorSet(t, errs, expectedErrStrings)
