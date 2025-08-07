@@ -308,7 +308,7 @@ func TestCommitmentChangeRequestRequiresConfirmation(t *testing.T) {
 	}
 
 	// transitioning into status "expired" is the only type of change to the relevant totals numbers
-	// that does not require confirmation
+	// that does not require confirmation - except from hard deletions
 	for _, status := range allAliveStatuses {
 		c = makeRequest(map[ProjectUUID]ProjectCommitmentChangeset{
 			"proj-one": {
@@ -333,7 +333,7 @@ func TestCommitmentChangeRequestRequiresConfirmation(t *testing.T) {
 		th.CheckDeepEquals(t, c.RequiresConfirmation(), false)
 	}
 
-	// cloud admins can delete commitments entirely, but this requires confirmation if in status "guaranteed" or "confirmed"
+	// same for hard deletions
 	for _, status := range allAliveStatuses {
 		c = makeRequest(map[ProjectUUID]ProjectCommitmentChangeset{
 			"proj-one": {
@@ -354,6 +354,32 @@ func TestCommitmentChangeRequestRequiresConfirmation(t *testing.T) {
 			},
 		})
 		t.Logf("checking deletion in status %q", status)
-		th.CheckDeepEquals(t, c.RequiresConfirmation(), status == CommitmentStatusGuaranteed || status == CommitmentStatusConfirmed)
+		th.CheckDeepEquals(t, c.RequiresConfirmation(), false)
+	}
+
+	// change of expiration date requires confirmation when already in StatusConfirmed or StatusGuaranteed
+	for _, status := range allAliveStatuses {
+		c = makeRequest(map[ProjectUUID]ProjectCommitmentChangeset{
+			"proj-one": {
+				ByResource: map[ResourceName]ResourceCommitmentChangeset{
+					"capacity-dense": {
+						TotalConfirmedBefore:  50,
+						TotalConfirmedAfter:   50,
+						TotalGuaranteedBefore: 15,
+						TotalGuaranteedAfter:  15,
+						Commitments: []Commitment{{
+							UUID:         dummyUUID1,
+							OldStatus:    Some(status),
+							NewStatus:    Some(status),
+							Amount:       10,
+							ExpiresAt:    dummyNow.Add(24 * time.Hour),
+							OldExpiresAt: Some(dummyNow.Add(12 * time.Hour)),
+						}},
+					},
+				},
+			},
+		})
+		t.Logf("checking expiresAt extension in status %q", status)
+		th.CheckDeepEquals(t, c.RequiresConfirmation(), status == CommitmentStatusConfirmed || status == CommitmentStatusGuaranteed)
 	}
 }
