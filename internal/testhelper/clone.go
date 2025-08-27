@@ -4,6 +4,7 @@
 package testhelper
 
 import (
+	"go/constant"
 	"reflect"
 	"strings"
 	"testing"
@@ -68,14 +69,14 @@ func walkByReference(v reflect.Value, action func(reflect.Value)) {
 		case t.PkgPath() == "github.com/majewsky/gg/option" && strings.HasPrefix(t.Name(), "Option["):
 			// Option[T] can be traversed with the Unpack() method
 			retvals := v.MethodByName("Unpack").Call(nil) // value, ok := optionalValue.Unpack()
-			if retvals[1].Interface().(bool) == true {    // if ok {
+			if retvals[1].Interface().(bool) {            // if ok {
 				walkByReference(retvals[0], action) // walkByReference(value, action)
 			}
 			return
 		case t.PkgPath() == "time" && t.Name() == "Time":
 			// time.Time does not have any pointer-ish values inside of it
 			return
-		case t.PkgPath() == "math/big" && t.Name() == "Int":
+		case t.PkgPath() == "math/big" && t.Name() == constant.Int.String():
 			// *big.Int DOES have pointer-ish values inside of it (specifically, a growable slice of words),
 			// but its API ensures that two *big.Int values with distinct pointers also hold distinct slices;
 			// since we already checked the outer pointer before coming here, we do not need to check further

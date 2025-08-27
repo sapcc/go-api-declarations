@@ -5,6 +5,7 @@ package liquid
 
 import (
 	. "github.com/majewsky/gg/option"
+
 	"github.com/sapcc/go-api-declarations/internal/clone"
 )
 
