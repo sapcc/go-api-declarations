@@ -12,6 +12,60 @@ import (
 	th "github.com/sapcc/go-api-declarations/internal/testhelper"
 )
 
+func TestCloneCommitmentChangeRequest(t *testing.T) {
+	// this dummy request sets all possible fields in order to test cloning of all levels
+	request := CommitmentChangeRequest{
+		AZ:          "az-one",
+		DryRun:      true,
+		InfoVersion: 42,
+		ByProject: map[ProjectUUID]ProjectCommitmentChangeset{
+			"uuid-for-dresden": {
+				ProjectMetadata: Some(ProjectMetadata{
+					UUID: "uuid-for-dresden",
+					Name: "dresden",
+					Domain: DomainMetadata{
+						UUID: "uuid-for-germany",
+						Name: "germany",
+					},
+				}),
+				ByResource: map[ResourceName]ResourceCommitmentChangeset{
+					"things": {
+						TotalConfirmedBefore:  10,
+						TotalConfirmedAfter:   8,
+						TotalGuaranteedBefore: 5,
+						TotalGuaranteedAfter:  5,
+						Commitments: []Commitment{{
+							UUID:         "uuid-for-commitment",
+							OldStatus:    Some(CommitmentStatusConfirmed),
+							NewStatus:    Some(CommitmentStatusExpired),
+							Amount:       2,
+							ConfirmBy:    Some(time.Now().Add(-1 * time.Hour)),
+							ExpiresAt:    time.Now(),
+							OldExpiresAt: Some(time.Now().Add(5 * time.Minute)),
+						}},
+					},
+				},
+			},
+		},
+	}
+
+	clonedRequest := request.Clone()
+	th.CheckDeepEquals(t, request, clonedRequest)
+	th.CheckFullySeparate(t, request, clonedRequest)
+}
+
+func TestCloneCommitmentChangeResponse(t *testing.T) {
+	// this dummy response sets all possible fields in order to test cloning of all levels
+	response := CommitmentChangeResponse{
+		RejectionReason: "this does not look right",
+		RetryAt:         Some(time.Now().Add(10 * time.Second)),
+	}
+
+	clonedResponse := response.Clone()
+	th.CheckDeepEquals(t, response, clonedResponse)
+	th.CheckFullySeparate(t, response, clonedResponse)
+}
+
 const (
 	dummyUUID1 = "30c343c8-7540-451a-bff5-fed9c35f8a43"
 	dummyUUID2 = "c0191273-2126-4cb9-a3cd-8288300af14e"
