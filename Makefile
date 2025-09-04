@@ -48,11 +48,13 @@ install-reuse: FORCE
 
 prepare-static-check: FORCE install-golangci-lint install-modernize install-shellcheck install-go-licence-detector install-addlicense install-reuse
 
-GO_BUILDFLAGS := $(GO_BUILDFLAGS)
-GO_LDFLAGS := $(GO_LDFLAGS)
-GO_TESTFLAGS := $(GO_TESTFLAGS)
-GO_TESTENV := $(GO_TESTENV)
-GO_BUILDENV := $(GO_BUILDENV)
+# To add additional flags or values, specify the variable in the environment, e.g. `GO_BUILDFLAGS='-tags experimental' make`.
+# To override the default flags or values, specify the variable on the command line, e.g. `make GO_BUILDFLAGS='-tags experimental'`.
+GO_BUILDFLAGS +=
+GO_LDFLAGS +=
+GO_TESTFLAGS +=
+GO_TESTENV +=
+GO_BUILDENV +=
 
 # which packages to test with test runner
 GO_TESTPKGS := $(shell go list -f '{{if or .TestGoFiles .XTestGoFiles}}{{.ImportPath}}{{end}}' ./...)
@@ -138,7 +140,6 @@ clean: FORCE
 	git clean -dxf build
 
 vars: FORCE
-	@printf "GO_BUILDENV=$(GO_BUILDENV)\n"
 	@printf "GO_BUILDFLAGS=$(GO_BUILDFLAGS)\n"
 	@printf "GO_COVERPKGS=$(GO_COVERPKGS)\n"
 	@printf "GO_LDFLAGS=$(GO_LDFLAGS)\n"
