@@ -6,6 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 # go-api-declarations
 
 [![CI](https://github.com/sapcc/go-api-declarations/actions/workflows/ci.yaml/badge.svg)](https://github.com/sapcc/go-api-declarations/actions/workflows/ci.yaml)
+[![Go Reference](https://pkg.go.dev/badge/github.com/sapcc/go-api-declarations.svg)](https://pkg.go.dev/github.com/sapcc/go-api-declarations)
 
 This Go module contains reusable declarations for types appearing in our APIs.
 This repository is designed to have as little dependencies as possible and
