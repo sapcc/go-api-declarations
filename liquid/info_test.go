@@ -13,9 +13,11 @@ import (
 func TestCloneServiceInfo(t *testing.T) {
 	// this dummy info sets all possible fields in order to test cloning of all levels
 	info := ServiceInfo{
-		Version: 42,
+		Version:     42,
+		DisplayName: "Test Service",
 		Resources: map[ResourceName]ResourceInfo{
 			"capacity": {
+				DisplayName:         "Capacity",
 				Unit:                UnitBytes,
 				Topology:            AZAwareTopology,
 				HasCapacity:         true,
@@ -27,9 +29,10 @@ func TestCloneServiceInfo(t *testing.T) {
 		},
 		Rates: map[RateName]RateInfo{
 			"thing_creations": {
-				Unit:     UnitNone,
-				Topology: FlatTopology,
-				HasUsage: true,
+				DisplayName: "Thing Creations",
+				Unit:        UnitNone,
+				Topology:    FlatTopology,
+				HasUsage:    true,
 			},
 		},
 		CapacityMetricFamilies: map[MetricName]MetricFamilyInfo{
