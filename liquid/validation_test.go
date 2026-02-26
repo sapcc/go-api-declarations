@@ -16,26 +16,38 @@ import (
 
 var serviceInfo = ServiceInfo{
 	Version: 73,
+	Categories: map[CategoryName]CategoryInfo{
+		"cat1": {
+			DisplayName: "Category 1",
+		},
+		"cat2": {
+			DisplayName: "Category 2",
+		},
+	},
 	Resources: map[ResourceName]ResourceInfo{
 		"foo": {
+			Category:    Some(CategoryName("cat1")),
 			Unit:        UnitNone,
 			Topology:    AZAwareTopology,
 			HasCapacity: true,
 			HasQuota:    true,
 		},
 		"bar": {
+			Category:    Some(CategoryName("cat1")),
 			Unit:        UnitNone,
 			Topology:    FlatTopology,
 			HasCapacity: true,
 			HasQuota:    true,
 		},
 		"baz": {
+			Category:    Some(CategoryName("cat2")),
 			Unit:        UnitNone,
 			Topology:    FlatTopology,
 			HasCapacity: false,
 			HasQuota:    false,
 		},
 		"qux": {
+			Category:    Some(CategoryName("cat2")),
 			Unit:        UnitNone,
 			Topology:    AZSeparatedTopology,
 			HasCapacity: true,
@@ -50,16 +62,19 @@ var serviceInfo = ServiceInfo{
 	},
 	Rates: map[RateName]RateInfo{
 		"corge": {
+			Category: Some(CategoryName("cat1")),
 			Unit:     UnitNone,
 			HasUsage: true,
 			Topology: AZAwareTopology,
 		},
 		"grault": {
+			Category: Some(CategoryName("cat1")),
 			Unit:     UnitNone,
 			HasUsage: true,
 			Topology: FlatTopology,
 		},
 		"garply": {
+			Category: Some(CategoryName("cat2")),
 			Unit:     UnitNone,
 			HasUsage: true,
 			Topology: AZAwareTopology,
@@ -94,18 +109,29 @@ var serviceInfo = ServiceInfo{
 
 func TestValidateServiceInfo(t *testing.T) {
 	invalidServiceInfo := ServiceInfo{
+		Categories: map[CategoryName]CategoryInfo{
+			"default": {DisplayName: "Default"}, // Category name "default" is reserved
+			"valid":   {DisplayName: "Valid"},
+			"extra":   {DisplayName: "Extra"}, // This category is not used by any resource or rate which is forbidden
+			"":        {DisplayName: "Empty"}, // Invalid category
+			"empty":   {DisplayName: ""},      // Invalid category
+		},
 		Resources: map[ResourceName]ResourceInfo{
-			"foo":         {}, // Topology is missing
-			"bar":         {Topology: "InvalidTopology"},
-			"baz":         {Topology: AZSeparatedTopology},
-			"foo+private": {Topology: FlatTopology}, // Invalid name
+			"foo":         {Category: Some(CategoryName("empty"))}, // Topology is missing
+			"bar":         {Category: Some(CategoryName("valid")), Topology: "InvalidTopology"},
+			"baz":         {Category: Some(CategoryName("valid")), Topology: AZSeparatedTopology},
+			"foo+private": {Category: Some(CategoryName("valid")), Topology: FlatTopology},               // Invalid name
+			"qux1":        {Category: Some(CategoryName("")), Topology: FlatTopology},                    // Invalid category
+			"qux2":        {Category: Some(CategoryName("someUnknownCategory")), Topology: FlatTopology}, // Unknown category
 		},
 		Rates: map[RateName]RateInfo{
-			"corge":      {HasUsage: true}, // Topology is missing
-			"grault":     {HasUsage: true, Topology: "InvalidTopology"},
-			"garply":     {HasUsage: false, Topology: AZSeparatedTopology}, // HasUsage = false is not allowed
-			"waldo":      {HasUsage: true, Topology: AZSeparatedTopology},
-			"foo/create": {HasUsage: true, Topology: FlatTopology}, // Invalid name
+			"corge":      {Category: Some(CategoryName("empty")), HasUsage: true}, // Topology is missing
+			"grault":     {Category: Some(CategoryName("valid")), HasUsage: true, Topology: "InvalidTopology"},
+			"garply":     {Category: Some(CategoryName("valid")), HasUsage: false, Topology: AZSeparatedTopology}, // HasUsage = false is not allowed
+			"waldo":      {Category: Some(CategoryName("valid")), HasUsage: true, Topology: AZSeparatedTopology},
+			"foo/create": {Category: Some(CategoryName("valid")), HasUsage: true, Topology: FlatTopology},               // Invalid name
+			"bla1":       {Category: Some(CategoryName("")), HasUsage: true, Topology: FlatTopology},                    // Invalid category
+			"bla2":       {Category: Some(CategoryName("someUnknownCategory")), HasUsage: true, Topology: FlatTopology}, // Unknown category
 		},
 	}
 	expectedErrStrings := []string{
@@ -116,6 +142,14 @@ func TestValidateServiceInfo(t *testing.T) {
 		`.Rates["grault"] has invalid topology "InvalidTopology"`,
 		`.Rates["garply"] declared with HasUsage = false, but must be true`,
 		`.Rates["foo/create"] has invalid name (must match /^[a-zA-Z][a-zA-Z0-9._-]*$/)`,
+		`.Resources["qux1"] has invalid category ""`,
+		`.Resources["qux2"] has category "someUnknownCategory", which is not declared in .Categories`,
+		`.Rates["bla1"] has invalid category ""`,
+		`.Rates["bla2"] has category "someUnknownCategory", which is not declared in .Categories`,
+		`.Categories["default"] has reserved identifier "default"`,
+		`.Categories[""] has invalid identifier`,
+		`.Categories["extra"] is not referenced by any resource or rate`,
+		`.Categories["empty"] has invalid DisplayName`,
 	}
 	errs := validateServiceInfoImpl(invalidServiceInfo)
 	assertErrorSet(t, errs, expectedErrStrings)

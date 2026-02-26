@@ -8,6 +8,8 @@ import (
 	"testing"
 
 	th "github.com/sapcc/go-api-declarations/internal/testhelper"
+
+	. "github.com/majewsky/gg/option"
 )
 
 func TestCloneServiceInfo(t *testing.T) {
@@ -15,9 +17,14 @@ func TestCloneServiceInfo(t *testing.T) {
 	info := ServiceInfo{
 		Version:     42,
 		DisplayName: "Test Service",
+		Categories: map[CategoryName]CategoryInfo{
+			"cat1": {DisplayName: "Category 1"},
+			"cat2": {DisplayName: "Category 2"},
+		},
 		Resources: map[ResourceName]ResourceInfo{
 			"capacity": {
 				DisplayName:         "Capacity",
+				Category:            Some(CategoryName("cat1")),
 				Unit:                UnitBytes,
 				Topology:            AZAwareTopology,
 				HasCapacity:         true,
@@ -30,6 +37,7 @@ func TestCloneServiceInfo(t *testing.T) {
 		Rates: map[RateName]RateInfo{
 			"thing_creations": {
 				DisplayName: "Thing Creations",
+				Category:    Some(CategoryName("cat2")),
 				Unit:        UnitNone,
 				Topology:    FlatTopology,
 				HasUsage:    true,
