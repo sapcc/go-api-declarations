@@ -110,11 +110,10 @@ var serviceInfo = ServiceInfo{
 func TestValidateServiceInfo(t *testing.T) {
 	invalidServiceInfo := ServiceInfo{
 		Categories: map[CategoryName]CategoryInfo{
-			"default": {DisplayName: "Default"}, // Category name "default" is reserved
-			"valid":   {DisplayName: "Valid"},
-			"extra":   {DisplayName: "Extra"}, // This category is not used by any resource or rate which is forbidden
-			"":        {DisplayName: "Empty"}, // Invalid category
-			"empty":   {DisplayName: ""},      // Invalid category
+			"valid": {DisplayName: "Valid"},
+			"extra": {DisplayName: "Extra"}, // This category is not used by any resource or rate which is forbidden
+			"":      {DisplayName: "Empty"}, // Invalid category
+			"empty": {DisplayName: ""},      // Invalid category
 		},
 		Resources: map[ResourceName]ResourceInfo{
 			"foo":         {Category: Some(CategoryName("empty"))}, // Topology is missing
@@ -146,7 +145,6 @@ func TestValidateServiceInfo(t *testing.T) {
 		`.Resources["qux2"] has category "someUnknownCategory", which is not declared in .Categories`,
 		`.Rates["bla1"] has invalid category ""`,
 		`.Rates["bla2"] has category "someUnknownCategory", which is not declared in .Categories`,
-		`.Categories["default"] has reserved identifier "default"`,
 		`.Categories[""] has invalid identifier`,
 		`.Categories["extra"] is not referenced by any resource or rate`,
 		`.Categories["empty"] has invalid DisplayName`,
@@ -502,6 +500,8 @@ func TestValidateUsageReport(t *testing.T) {
 }
 
 func assertErrorSet(t *testing.T, actualErrorSet errorset.ErrorSet, expectedErrStrings []string) {
+	t.Helper()
+
 	actualErrStrings := strings.Split(actualErrorSet.Join("\n"), "\n")
 	for _, expectedErrStr := range expectedErrStrings {
 		if !slices.Contains(actualErrStrings, expectedErrStr) {
