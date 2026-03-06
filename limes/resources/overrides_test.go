@@ -22,7 +22,7 @@ func TestParseQuotaOverrides(t *testing.T) {
 		case "unittest/things":
 			return limes.UnitNone, nil
 		default:
-			return limes.UnitUnspecified, fmt.Errorf("%s/%s is not a valid resource", serviceType, resourceName)
+			return limes.UnitNone, fmt.Errorf("%s/%s is not a valid resource", serviceType, resourceName)
 		}
 	}
 
