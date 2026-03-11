@@ -10,7 +10,7 @@ import (
 )
 
 // Amount describes an amount of a countable or measurable resource in terms of a base unit.
-// This type provides basic serialization and deserialization for unit strings,
+// This type provides basic serialization and deserialization for unit or amount strings,
 // e.g. between "1 KiB" and Amount{"B", 1024}.
 type Amount struct {
 	Base   BaseUnit
@@ -113,23 +113,11 @@ func ParseAmount(input string, formats Format) (Amount, error) {
 		}
 	}
 
-	formatsDisplay := make([]string, 0, 4)
-	if acceptEmpty {
-		formatsDisplay = append(formatsDisplay, `""`)
-	}
-	if acceptNumberOnly {
-		formatsDisplay = append(formatsDisplay, `"<number>"`)
-	}
-	if acceptUnitOnly {
-		formatsDisplay = append(formatsDisplay, `"<unit>"`)
-	}
-	if acceptNumberWithUnit {
-		formatsDisplay = append(formatsDisplay, `"<number> <unit>"`)
-	}
-	if len(formatsDisplay) == 1 {
-		return Amount{}, fmt.Errorf(`value %q does not match expected format (%s)`, input, formatsDisplay[0])
+	desc, multipleFormats := formats.Description()
+	if multipleFormats {
+		return Amount{}, fmt.Errorf(`value %q does not match any expected format (%s)`, input, desc)
 	} else {
-		return Amount{}, fmt.Errorf(`value %q does not match any expected format (%s)`, input, strings.Join(formatsDisplay, " or "))
+		return Amount{}, fmt.Errorf(`value %q does not match expected format (%s)`, input, desc)
 	}
 }
 
@@ -186,5 +174,31 @@ func (a Amount) Format(formats Format) string {
 	}
 
 	// caller has not allowed us to use any format that could display this amount
-	panic(fmt.Sprintf("cannot display %#v with formats = 0x%x", a, formats))
+	desc, multipleFormats := formats.Description()
+	if multipleFormats {
+		panic(fmt.Sprintf("cannot display %#v using any of the selected formats (%s)", a, desc))
+	} else {
+		panic(fmt.Sprintf("cannot display %#v using the selected format (%s)", a, desc))
+	}
+}
+
+// Description formats this set of formats as a description for use in error messages:
+//
+//	desc, _ := (units.UnitOnlyFormat | unit.NumberWithUnitFormat).String()
+//	fmt.Println(desc) // prints: "<unit>" or "<number> <unit>"
+func (f Format) Description() (output string, multipleFormats bool) {
+	parts := make([]string, 0, 4)
+	if (f & EmptyFormat) == EmptyFormat {
+		parts = append(parts, `""`)
+	}
+	if (f & NumberOnlyFormat) == NumberOnlyFormat {
+		parts = append(parts, `"<number>"`)
+	}
+	if (f & UnitOnlyFormat) == UnitOnlyFormat {
+		parts = append(parts, `"<unit>"`)
+	}
+	if (f & NumberWithUnitFormat) == NumberWithUnitFormat {
+		parts = append(parts, `"<number> <unit>"`)
+	}
+	return strings.Join(parts, " or "), len(parts) > 1
 }
