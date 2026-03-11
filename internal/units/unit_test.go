@@ -75,11 +75,7 @@ func TestUnitMultiplyBy(t *testing.T) {
 	// This test checks some interesting corner cases.
 
 	// multiply by 1 produces exactly equal instances
-	u, err := UnitNone.MultiplyBy(1)
-	th.AssertNoErr(t, err)
-	th.CheckDeepEquals(t, UnitNone, u)
-
-	u, err = UnitBytes.MultiplyBy(1)
+	u, err := UnitBytes.MultiplyBy(1)
 	th.AssertNoErr(t, err)
 	th.CheckDeepEquals(t, UnitBytes, u)
 

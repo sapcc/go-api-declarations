@@ -67,12 +67,9 @@ func (u Unit) MultiplyBy(factor uint64) (Unit, error) {
 		panic("cannot multiply units by a zero factor")
 	}
 	if u == UnitNone {
-		if factor == 1 {
-			return UnitNone, nil
-		} else {
-			// the result could only be serialized with NumberOnlyFormat, which is not part of `validFormatsForUnit`
-			panic("cannot multiply UnitNone by a factor != 1")
-		}
+		// the result could only be serialized with NumberOnlyFormat, which is not part of `validFormatsForUnit`
+		// (we could technically allow `factor == 1`, but that case has no value to it)
+		panic("cannot scale UnitNone because results would not be representable with Unit's serialization rules")
 	}
 	amount, err := u.amount.MultiplyBy(factor)
 	return Unit{amount}, err
