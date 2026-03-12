@@ -18,6 +18,25 @@ func AssertNoErr(t *testing.T, err error) {
 	}
 }
 
+func AssertErr(t *testing.T, expected string, actual error) {
+	t.Helper()
+	switch {
+	case actual == nil:
+		t.Errorf("expected error %q, but got no error", expected)
+	case actual.Error() != expected:
+		t.Errorf("expected error: %s", expected)
+		t.Errorf(" but got error: %s", actual.Error())
+	}
+}
+
+func CheckEquals[V comparable](t *testing.T, expected, actual V) {
+	t.Helper()
+	if expected != actual {
+		t.Errorf("expected value: %#v", expected)
+		t.Errorf(" but got value: %#v", actual)
+	}
+}
+
 func CheckDeepEquals(t *testing.T, expected, actual any) {
 	t.Helper()
 	if !reflect.DeepEqual(expected, actual) {
