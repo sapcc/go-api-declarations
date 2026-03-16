@@ -11,6 +11,7 @@ import (
 	"testing"
 )
 
+// AssertNoErr fails the test if the provided error is not nil.
 func AssertNoErr(t *testing.T, err error) {
 	t.Helper()
 	if err != nil {
@@ -18,6 +19,7 @@ func AssertNoErr(t *testing.T, err error) {
 	}
 }
 
+// AssertErr fails the test if the provided error is nil.
 func AssertErr(t *testing.T, expected string, actual error) {
 	t.Helper()
 	switch {
@@ -29,6 +31,7 @@ func AssertErr(t *testing.T, expected string, actual error) {
 	}
 }
 
+// CheckEquals fails the test if a simple equal check between expected and actual fails.
 func CheckEquals[V comparable](t *testing.T, expected, actual V) {
 	t.Helper()
 	if expected != actual {
@@ -37,6 +40,7 @@ func CheckEquals[V comparable](t *testing.T, expected, actual V) {
 	}
 }
 
+// CheckDeepEquals fails the test if a reflect.DeepEqual check between expected and actual fails.
 func CheckDeepEquals(t *testing.T, expected, actual any) {
 	t.Helper()
 	if !reflect.DeepEqual(expected, actual) {
@@ -45,6 +49,8 @@ func CheckDeepEquals(t *testing.T, expected, actual any) {
 	}
 }
 
+// CheckJSONEquals fails the test if a reflect.DeepEqual check between the marshalled actual value
+// and the expectedJSON fails.
 func CheckJSONEquals(t *testing.T, expectedJSON string, actual any) {
 	t.Helper()
 	actualJSON, err := json.Marshal(actual)
@@ -58,6 +64,7 @@ func CheckJSONEquals(t *testing.T, expectedJSON string, actual any) {
 	}
 }
 
+// decodeJSON is a convenience wrapper around json.Marshal and fails the test if an error occurs.
 func decodeJSON(t *testing.T, buf []byte) (data any) {
 	t.Helper()
 	err := json.Unmarshal(buf, &data)
