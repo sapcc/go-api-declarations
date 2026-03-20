@@ -85,7 +85,7 @@ type HelmRelease struct {
 	DurationSeconds *uint64    `json:"duration,omitempty"`
 }
 
-// ActiveDirectory appears in type Event. It describes a deployment of Active
+// ActiveDirectoryDeployment appears in type Event. It describes a deployment of Active
 // Directory to one of our Windows servers.
 type ActiveDirectoryDeployment struct {
 	Landscape string  `json:"landscape"` // e.g. "dev" or "prod"
