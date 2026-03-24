@@ -68,7 +68,7 @@ func (i ServiceInfo) Clone() ServiceInfo {
 }
 
 // CategoryName is a name of a category that can group resources and rates.
-// It appears in type ServiceInfo, ResourceInfo and RateInfo.
+// It appears in type [ServiceInfo], [ResourceInfo] and [RateInfo].
 type CategoryName string
 
 // IsValid returns whether a CategoryName is valid.
@@ -78,7 +78,7 @@ func (c CategoryName) IsValid() bool {
 }
 
 // CategoryInfo describes a category that can group resources and rates of a liquid's service.
-// This type appears in type ServiceInfo.
+// This type appears in type [ServiceInfo].
 type CategoryInfo struct {
 	DisplayName string `json:"displayName"`
 }
@@ -91,7 +91,7 @@ func (c CategoryInfo) Clone() CategoryInfo {
 }
 
 // ResourceInfo describes a resource that a liquid's service provides.
-// This type appears in type ServiceInfo.
+// This type appears in type [ServiceInfo].
 type ResourceInfo struct {
 	// The display name can be used in user-facing messages or interfaces to refer to the resource.
 	DisplayName string `json:"displayName"`
@@ -141,7 +141,7 @@ func (i ResourceInfo) Clone() ResourceInfo {
 }
 
 // Topology describes how capacity and usage reported by a certain resource is structured.
-// It appears in type ResourceInfo.
+// It appears in type [ResourceInfo].
 type Topology string
 
 const (
@@ -218,7 +218,7 @@ func (t Topology) IsValid() bool {
 }
 
 // RateInfo describes a rate that a liquid's service provides.
-// This type appears in type ServiceInfo.
+// This type appears in type [ServiceInfo].
 type RateInfo struct {
 	// The display name can be used in user-facing messages or interfaces to refer to the rate.
 	DisplayName string `json:"displayName"`
@@ -251,7 +251,7 @@ func (i RateInfo) Clone() RateInfo {
 
 // ProjectMetadata includes metadata about a project from Keystone.
 //
-// It appears in types ServiceUsageRequest and ServiceQuotaRequest if requested by the ServiceInfo.
+// It appears in types [ServiceUsageRequest] and [ServiceQuotaRequest] if requested by the [ServiceInfo].
 type ProjectMetadata struct {
 	UUID   string         `json:"uuid"`
 	Name   string         `json:"name"`
@@ -260,7 +260,7 @@ type ProjectMetadata struct {
 
 // DomainMetadata includes metadata about a domain from Keystone.
 //
-// It appears in type ProjectMetadata.
+// It appears in type [ProjectMetadata].
 type DomainMetadata struct {
 	UUID string `json:"uuid"`
 	Name string `json:"name"`
