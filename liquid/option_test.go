@@ -36,7 +36,7 @@ func getOptionTypesRecursively(t *testing.T, rt reflect.Type, optionTypes map[re
 	t.Helper()
 
 	switch rt.Kind() {
-	case reflect.Ptr, reflect.Interface, reflect.Slice, reflect.Array, reflect.Map:
+	case reflect.Pointer, reflect.Interface, reflect.Slice, reflect.Array, reflect.Map:
 		getOptionTypesRecursively(t, rt.Elem(), optionTypes)
 	case reflect.Struct:
 		if strings.HasPrefix(rt.Name(), "Option") {
