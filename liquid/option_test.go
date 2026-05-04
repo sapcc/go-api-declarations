@@ -23,7 +23,7 @@ func TestForeachOptionType(t *testing.T) {
 
 	registeredOptionTypes := ForeachOptionType(getOptionType)
 	if slices.Contains(registeredOptionTypes, nil) {
-		t.Error("ForeachOptionTypeInLIQUID contains values that are not of type github.com/majewsky/gg/option.Option")
+		t.Error("ForeachOptionTypeInLIQUID contains values that are not of type go.xyrillian.de/gg/option.Option")
 	}
 	for optionType := range liquidOptionTypes {
 		if !slices.Contains(registeredOptionTypes, optionType) {

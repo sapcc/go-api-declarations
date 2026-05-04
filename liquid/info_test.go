@@ -9,7 +9,7 @@ import (
 
 	th "github.com/sapcc/go-api-declarations/internal/testhelper"
 
-	. "github.com/majewsky/gg/option"
+	. "go.xyrillian.de/gg/option"
 )
 
 func TestCloneServiceInfo(t *testing.T) {

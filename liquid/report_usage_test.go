@@ -8,7 +8,7 @@ import (
 	"math/big"
 	"testing"
 
-	. "github.com/majewsky/gg/option"
+	. "go.xyrillian.de/gg/option"
 
 	th "github.com/sapcc/go-api-declarations/internal/testhelper"
 )

@@ -66,7 +66,7 @@ func walkByReference(v reflect.Value, action func(reflect.Value)) {
 		// use domain knowledge instead for the few relevant cases
 		t := v.Type()
 		switch {
-		case t.PkgPath() == "github.com/majewsky/gg/option" && strings.HasPrefix(t.Name(), "Option["):
+		case t.PkgPath() == "go.xyrillian.de/gg/option" && strings.HasPrefix(t.Name(), "Option["):
 			// Option[T] can be traversed with the Unpack() method
 			retvals := v.MethodByName("Unpack").Call(nil) // value, ok := optionalValue.Unpack()
 			if retvals[1].Interface().(bool) {            // if ok {
