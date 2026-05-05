@@ -84,6 +84,11 @@ var serviceInfo = ServiceInfo{
 			HasUsage: true,
 			Topology: AZAwareTopology,
 		},
+		"object_creations": {
+			Unit:     UnitNone,
+			HasUsage: false,
+			Topology: AZAwareTopology,
+		},
 	},
 	CapacityMetricFamilies: map[MetricName]MetricFamilyInfo{
 		"capacityMetric1": {
@@ -126,7 +131,6 @@ func TestValidateServiceInfo(t *testing.T) {
 		Rates: map[RateName]RateInfo{
 			"corge":      {Category: Some(CategoryName("empty")), HasUsage: true}, // Topology is missing
 			"grault":     {Category: Some(CategoryName("valid")), HasUsage: true, Topology: "InvalidTopology"},
-			"garply":     {Category: Some(CategoryName("valid")), HasUsage: false, Topology: AZSeparatedTopology}, // HasUsage = false is not allowed
 			"waldo":      {Category: Some(CategoryName("valid")), HasUsage: true, Topology: AZSeparatedTopology},
 			"foo/create": {Category: Some(CategoryName("valid")), HasUsage: true, Topology: FlatTopology},               // Invalid name
 			"bla1":       {Category: Some(CategoryName("")), HasUsage: true, Topology: FlatTopology},                    // Invalid category
@@ -139,7 +143,6 @@ func TestValidateServiceInfo(t *testing.T) {
 		`.Resources["foo+private"] has invalid name (must match /^[a-zA-Z][a-zA-Z0-9._-]*$/)`,
 		`.Rates["corge"] has invalid topology ""`,
 		`.Rates["grault"] has invalid topology "InvalidTopology"`,
-		`.Rates["garply"] declared with HasUsage = false, but must be true`,
 		`.Rates["foo/create"] has invalid name (must match /^[a-zA-Z][a-zA-Z0-9._-]*$/)`,
 		`.Resources["qux1"] has invalid category ""`,
 		`.Resources["qux2"] has category "someUnknownCategory", which is not declared in .Categories`,
@@ -317,6 +320,11 @@ func TestValidateUsageReport(t *testing.T) {
 					"az-one": {Usage: Some(big.NewInt(5))}, // Partial AZ aware reporting, az-two is missing
 				},
 			},
+			"object_creations": {
+				PerAZ: map[AvailabilityZone]*AZRateUsageReport{
+					"any": {Usage: Some(big.NewInt(10))}, // Unexpected: rate was declared as HasUsage = false
+				},
+			},
 			"unknown": {
 				PerAZ: map[AvailabilityZone]*AZRateUsageReport{
 					"any": {Usage: Some(big.NewInt(5))}, // Report for rate which is not in ServiceInfo
@@ -344,6 +352,7 @@ func TestValidateUsageReport(t *testing.T) {
 		`.Rates["grault"].PerAZ has entries for []liquid.AvailabilityZone{"az-one", "az-two"}, which is invalid for topology "flat" (expected entries for []liquid.AvailabilityZone{"any"})`,
 		`.Rates["garply"].PerAZ has entries for []liquid.AvailabilityZone{"any"}, which is invalid for topology "az-aware" (expected entries for []liquid.AvailabilityZone{"az-one", "az-two"})`,
 		`.Rates["waldo"].PerAZ has entries for []liquid.AvailabilityZone{"az-one"}, which is invalid for topology "az-aware" (expected entries for []liquid.AvailabilityZone{"az-one", "az-two"})`,
+		`unexpected value for .Rates["object_creations"] (rate was declared with HasUsage = false)`,
 		`unexpected value for .Rates["unknown"] (rate was not declared)`,
 		`missing value for .Metrics["usageMetric1"] (declared in .UsageMetricFamilies)`,
 		`unexpected value for .Metrics["unknownMetric"] (not declared in .UsageMetricFamilies)`,
