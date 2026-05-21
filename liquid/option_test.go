@@ -48,9 +48,8 @@ func getOptionTypesRecursively(t *testing.T, rt reflect.Type, optionTypes map[re
 			optionTypes[field.Type] = struct{}{}
 			getOptionTypesRecursively(t, field.Type, optionTypes)
 		} else {
-			for idx := range rt.NumField() {
-				f := rt.Field(idx)
-				getOptionTypesRecursively(t, f.Type, optionTypes)
+			for field := range rt.Fields() {
+				getOptionTypesRecursively(t, field.Type, optionTypes)
 			}
 		}
 	}

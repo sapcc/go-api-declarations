@@ -59,8 +59,8 @@ var domainMockResources = &DomainResourceReports{
 		ResourceInfo: ResourceInfo{
 			Name: "cores",
 		},
-		DomainQuota:   p2u64(50),
-		ProjectsQuota: p2u64(20),
+		DomainQuota:   new(uint64(50)),
+		ProjectsQuota: new(uint64(20)),
 		Usage:         10,
 	},
 	"ram": &DomainResourceReport{
@@ -68,8 +68,8 @@ var domainMockResources = &DomainResourceReports{
 			Name: "ram",
 			Unit: limes.UnitMebibytes,
 		},
-		DomainQuota:   p2u64(20480),
-		ProjectsQuota: p2u64(10240),
+		DomainQuota:   new(uint64(20480)),
+		ProjectsQuota: new(uint64(10240)),
 		Usage:         4080,
 	},
 }

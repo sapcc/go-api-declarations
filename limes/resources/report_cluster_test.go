@@ -107,11 +107,11 @@ var clusterMockResources = &ClusterResourceReports{
 		PerAZ: map[limes.AvailabilityZone]*ClusterAZResourceReport{
 			"az-one": {
 				Capacity: 250,
-				Usage:    p2u64(70),
+				Usage:    new(uint64(70)),
 			},
 			"az-two": {
 				Capacity: 250,
-				Usage:    p2u64(30),
+				Usage:    new(uint64(30)),
 			},
 		},
 		CapacityPerAZ: ClusterAvailabilityZoneReports{
@@ -126,7 +126,7 @@ var clusterMockResources = &ClusterResourceReports{
 				Usage:    30,
 			},
 		},
-		DomainsQuota: p2u64(200),
+		DomainsQuota: new(uint64(200)),
 		Usage:        100,
 	},
 	"ram": &ClusterResourceReport{
@@ -135,7 +135,7 @@ var clusterMockResources = &ClusterResourceReports{
 			Unit: limes.UnitMebibytes,
 		},
 		Capacity:     &ramCap,
-		DomainsQuota: p2u64(102400),
+		DomainsQuota: new(uint64(102400)),
 		Usage:        40800,
 	},
 }
@@ -153,10 +153,6 @@ var clusterMockServices = &ClusterServiceReports{
 		MaxScrapedAt: p2time(1539024049),
 		MinScrapedAt: p2time(1539023764),
 	},
-}
-
-func p2u64(val uint64) *uint64 {
-	return &val
 }
 
 func TestClusterServicesMarshal(t *testing.T) {
