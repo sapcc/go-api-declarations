@@ -23,13 +23,35 @@ var (
 )
 
 const (
-	unixFormat           = "Unix"
-	commaSeparatedFormat = "comma-separated"
+	unixFormat = "Unix"
 )
 
+// parseQTag parses a q struct tag value into its key name, optional format, and required flag.
+// The tag format is "key_name" or "key_name,format:FormatName,required".
+// Examples:
+//
+//	`q:"updated_at"`                      → key="updated_at", format="", required=false
+//	`q:"updated_at,format:Unix"`          → key="updated_at", format="Unix", required=false
+//	`q:"updated_at,required"`             → key="updated_at", format="", required=true
+//	`q:"updated_at,format:Unix,required"` → key="updated_at", format="Unix", required=true
+func parseQTag(tag string) (key, format string, required bool) {
+	parts := strings.SplitN(tag, ",", 2)
+	key = parts[0]
+	if len(parts) > 1 {
+		for opt := range strings.SplitSeq(parts[1], ",") {
+			if after, found := strings.CutPrefix(opt, "format:"); found {
+				format = after
+			} else if opt == "required" {
+				required = true
+			}
+		}
+	}
+	return key, format, required
+}
+
 // isZero checks if a value is the zero value for its type. For scalar values,
-// it uses reflect. For structs it checks each field, except structs that
-// implement the isZeroer interface. For arrays it checks each element. For
+// it uses reflect. Only certain structs are allowed: Ones that implement the
+// isZeroer interface and time.Time. For arrays it checks each element. For
 // pointer, funcs, maps and slices reflect.IsNil can be used.
 func isZero(v reflect.Value) bool {
 	// Check for types implementing IsZero() bool (e.g. Option[T], time.Time).
@@ -58,6 +80,9 @@ func isZero(v reflect.Value) bool {
 		}
 		return z
 	case reflect.Struct:
+		if v.Type() != reflect.TypeFor[time.Time]() {
+			panic("for structs only time.Time and implementers of isZeroer are supported")
+		}
 		z := true
 		for _, structField := range v.Fields() {
 			z = z && isZero(structField)

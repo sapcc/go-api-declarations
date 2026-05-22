@@ -4,158 +4,129 @@
 package opts
 
 import (
-	"errors"
 	"fmt"
 	"net/url"
 	"reflect"
 	"slices"
 	"strconv"
-	"strings"
 	"time"
 )
 
-/*
-BuildQueryString is an internal function to be used by request methods in
-individual resource packages.
-
-It accepts a tagged structure and expands it into a URL struct. Field names are
-converted into query parameters based on a "q" tag. For example:
-
-	type struct Something {
-	   Bar string `q:"x_bar"`
-	   Baz int    `q:"lorem_ipsum"`
-	}
-	instance := Something{
-	   Bar: "AAA",
-	   Baz: "BBB",
-	}
-
-will be converted into "?x_bar=AAA&lorem_ipsum=BBB".
-
-The struct's fields may be strings, integers, slices, or boolean values. Fields
-left at their type's zero value will be omitted from the query.
-
-Slice are handled in one of two ways:
-
-	type struct Something {
-	   Bar []string `q:"bar"` // E.g. ?bar=1&bar=2
-	   Baz []int    `q:"baz" format="comma-separated"` // E.g. ?baz=1,2
-	}
-*/
-func BuildQueryString(opts any) (*url.URL, error) {
+// BuildQueryString is a function to be used by request methods with opts structs.
+// It's inspired by gophercloud.BuildQueryString with partially stricter behavior.
+// It accepts a tagged structure and expands it into a URL struct. Field names are
+// converted into query parameters based on a "q" tag. For example:
+//
+//	type struct Something {
+//	   Bar string `q:"x_bar"`
+//	   Baz int    `q:"lorem_ipsum"`
+//	}
+//	instance := Something{
+//	   Bar: "AAA",
+//	   Baz: "BBB",
+//	}
+//
+// will be converted into "?x_bar=AAA&lorem_ipsum=BBB".
+//
+// On configuration errors (e.g. non-struct opts, opts with non-q-tagged fields)
+// the function panics. On user errors (e.g. missing required field) an error
+// is returned. On success, url.Values are returned according to the opts.
+//
+// The serialization supports all scalars except complex. Structs of scalars are supported
+// and special structs like time.Time. Additionally, it allows Slices (for multiple
+// values), option.Option (recommended for optional values) and pointers (as alternative
+// to option.Option) of these. Only map[string]string is supported as a map type.
+// Fields left at their type's zero value will be omitted from the query.
+//
+// Slice fields use repeated query parameters:
+// Foo []string `q:"foo"`                       // ?foo=a&foo=b
+//
+// Map fields accept plain repeated key:value pairs:
+// Bar map[string]string `q:"bar"`              // ?bar=k1:v1&bar=k2:v2
+//
+// time.Time fields support the formats RFC3339Nano, RFC3339, DateTime, Date, Unix.
+// A single `format` option can be set, to define what is used for serialization, otherwise
+// the default RFC3339 gets used:
+// Baz time.Time `q:"baz,format:DateTime"`       // ?baz=1999-01-01 00:00:00
+//
+// A `required` option can be set to define that a missing value will produce an error.
+// Quux string `q:"quux,required"`               // ?foo=bar --> error
+func BuildQueryString(opts any) (url.Values, error) {
 	optsValue := reflect.ValueOf(opts)
 	if optsValue.Kind() == reflect.Ptr { //nolint: govet // won't inline this...
 		optsValue = optsValue.Elem()
 	}
-
-	optsType := reflect.TypeOf(opts)
-	if optsType.Kind() == reflect.Ptr { //nolint: govet // won't inline this...
-		optsType = optsType.Elem()
-	}
-
+	optsType := optsValue.Type()
 	params := url.Values{}
 
-	if optsValue.Kind() == reflect.Struct {
-		for i := range optsValue.NumField() {
-			v := optsValue.Field(i)
-			f := optsType.Field(i)
-			qTag := f.Tag.Get("q")
+	if optsValue.Kind() != reflect.Struct {
+		panic("options type is not a struct")
+	}
+	for _, field := range reflect.VisibleFields(optsType) {
+		fieldValue := optsValue.FieldByIndex(field.Index)
+		qTag := field.Tag.Get("q")
+		if qTag == "" {
+			panic(fmt.Sprintf(`expected %q to have a "q:"-tag`, field.Name))
+		}
+		key, format, required := parseQTag(qTag)
 
-			// if the field has a 'q' tag, it goes in the query string
-			if qTag != "" {
-				tags := strings.Split(qTag, ",")
-
-				// if the field is set, add it to the slice of query pieces
-				if !isZero(v) {
-					format := f.Tag.Get("format")
-				loop:
-					switch v.Kind() {
-					case reflect.Ptr: //nolint: govet // won't inline this...
-						v = v.Elem()
-						goto loop
-					case reflect.String:
-						params.Add(tags[0], v.String())
-					case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-						params.Add(tags[0], strconv.FormatInt(v.Int(), 10))
-					case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-						params.Add(tags[0], strconv.FormatUint(v.Uint(), 10))
-					case reflect.Bool:
-						params.Add(tags[0], strconv.FormatBool(v.Bool()))
-					case reflect.Float32, reflect.Float64:
-						params.Add(tags[0], strconv.FormatFloat(v.Float(), 'g', -1, v.Type().Bits()))
-					case reflect.Slice:
-						var values []string
-						for i := range v.Len() {
-							values = append(values, serializeValue(v.Index(i), format))
-						}
-						if format == "comma-separated" {
-							params.Add(tags[0], strings.Join(values, ","))
-						} else {
-							params[tags[0]] = append(params[tags[0]], values...)
-						}
-					case reflect.Struct:
-						if v.Type() == reflect.TypeFor[time.Time]() {
-							params.Add(tags[0], serializeValue(v, format))
-						} else if m := v.MethodByName("AsPointer"); m.IsValid() {
-							// Option[T] — unwrap via AsPointer
-							results := m.Call(nil)
-							if len(results) == 1 && results[0].Kind() == reflect.Ptr && !results[0].IsNil() { //nolint:govet // won't inline this...
-								params.Add(tags[0], serializeValue(results[0].Elem(), format))
-							}
-						} else {
-							// Plain nested struct — serialize with dot-prefix
-							serializeStruct(v, tags[0], params)
-						}
-					case reflect.Map:
-						if v.Type().Key().Kind() == reflect.String && v.Type().Elem().Kind() == reflect.String {
-							keys := make([]string, 0, v.Len())
-							for _, k := range v.MapKeys() {
-								keys = append(keys, k.String())
-							}
-							slices.Sort(keys)
-							var s []string
-							for _, k := range keys {
-								value := v.MapIndex(reflect.ValueOf(k)).String()
-								s = append(s, fmt.Sprintf("'%s':'%s'", k, value))
-							}
-							params.Add(tags[0], fmt.Sprintf("{%s}", strings.Join(s, ", ")))
-						}
-					}
-				} else {
-					// if the field has a 'required' tag, it can't have a zero-value
-					if requiredTag := f.Tag.Get("required"); requiredTag == "true" {
-						return &url.URL{}, fmt.Errorf("required query parameter [%s] not set", f.Name)
-					}
+		// if field not set, skip
+		if isZero(fieldValue) {
+			if required {
+				// if the field is required, it can't have a zero-value
+				return url.Values{}, fmt.Errorf("required query parameter [%s] not set", field.Name)
+			}
+			continue
+		}
+	loop:
+		switch fieldValue.Kind() {
+		case reflect.Ptr: //nolint: govet // won't inline this...
+			fieldValue = fieldValue.Elem()
+			goto loop
+		case reflect.String:
+			params.Add(key, fieldValue.String())
+		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+			params.Add(key, strconv.FormatInt(fieldValue.Int(), 10))
+		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+			params.Add(key, strconv.FormatUint(fieldValue.Uint(), 10))
+		case reflect.Bool:
+			params.Add(key, strconv.FormatBool(fieldValue.Bool()))
+		case reflect.Float32, reflect.Float64:
+			params.Add(key, strconv.FormatFloat(fieldValue.Float(), 'g', -1, fieldValue.Type().Bits()))
+		case reflect.Slice:
+			var values []string
+			for i := range fieldValue.Len() {
+				values = append(values, serializeValue(fieldValue.Index(i), format))
+			}
+			params[key] = append(params[key], values...)
+		case reflect.Struct:
+			if fieldValue.Type() == reflect.TypeFor[time.Time]() {
+				params.Add(key, serializeValue(fieldValue, format))
+			} else if m := fieldValue.MethodByName("AsPointer"); m.IsValid() {
+				// Option[T] — unwrap via AsPointer
+				results := m.Call(nil)
+				if len(results) == 1 && results[0].Kind() == reflect.Ptr && !results[0].IsNil() { //nolint:govet // won't inline this...
+					params.Add(key, serializeValue(results[0].Elem(), format))
+				}
+			} else {
+				// defense in depth: already handled by isZero function
+				panic("for structs only time.Time and implementers of isZeroer are supported")
+			}
+		case reflect.Map:
+			if fieldValue.Type().Key().Kind() == reflect.String && fieldValue.Type().Elem().Kind() == reflect.String {
+				keys := make([]string, 0, fieldValue.Len())
+				for _, k := range fieldValue.MapKeys() {
+					keys = append(keys, k.String())
+				}
+				slices.Sort(keys)
+				for _, k := range keys {
+					value := fieldValue.MapIndex(reflect.ValueOf(k)).String()
+					params.Add(key, k+":"+value)
 				}
 			}
 		}
-
-		return &url.URL{RawQuery: params.Encode()}, nil
 	}
-	// Return an error if the underlying type of 'opts' isn't a struct.
-	return nil, errors.New("options type is not a struct")
-}
-
-// serializeStruct serializes a struct's q-tagged fields as dot-prefixed query parameters.
-func serializeStruct(v reflect.Value, prefix string, params url.Values) {
-	vType := v.Type()
-	for i := range v.NumField() {
-		fv := v.Field(i)
-		f := vType.Field(i)
-		qTag := f.Tag.Get("q")
-		if qTag == "" {
-			continue
-		}
-		key := prefix + "." + strings.SplitN(qTag, ",", 2)[0]
-		if !isZero(fv) {
-			format := f.Tag.Get("format")
-			// Dereference pointer
-			for fv.Kind() == reflect.Ptr { //nolint:govet // won't inline this...
-				fv = fv.Elem()
-			}
-			params.Add(key, serializeValue(fv, format))
-		}
-	}
+	return params, nil
 }
 
 // serializeValue converts a reflect.Value to its string representation for query parameters.

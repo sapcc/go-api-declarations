@@ -19,14 +19,8 @@ import (
 	"github.com/sapcc/go-api-declarations/opts"
 )
 
-type testInnerOpts struct {
-	Name string `q:"name"`
-	Age  int    `q:"age"`
-}
-
 type testOpts struct {
 	StringMap      map[string]string `q:"string_map"`
-	Struct         testInnerOpts     `q:"struct"`
 	Bool           bool              `q:"bool"`
 	Time           time.Time         `q:"time"`
 	String         string            `q:"string"`
@@ -42,7 +36,6 @@ type testOpts struct {
 	Uint64         uint64            `q:"uint64"`
 	Float32        float32           `q:"float32"`
 	Float64        float64           `q:"float64"`
-	PointerStruct  *testInnerOpts    `q:"pointer_struct"`
 	PointerBool    *bool             `q:"pointer_bool"`
 	PointerTime    *time.Time        `q:"pointer_time"`
 	PointerString  *string           `q:"pointer_string"`
@@ -92,9 +85,8 @@ type testOpts struct {
 
 func checkParsingHappyPath(t *testing.T, variable, query string, result testOpts) {
 	t.Helper()
-	var to testOpts
 	r := httptest.NewRequest(http.MethodGet, "/some/unimportant/path"+query, http.NoBody)
-	err := opts.ParseQueryString(r, &to)
+	to, err := opts.ParseQueryString[testOpts](r)
 	if err != nil {
 		t.Fatal(variable + ": " + err.Error())
 	}
@@ -105,19 +97,9 @@ func TestOptParserHappyPaths(t *testing.T) {
 	// empty query
 	checkParsingHappyPath(t, "empty opts", "", testOpts{})
 
-	// map plain k:v notation
-	checkParsingHappyPath(t, "string_map plain", "?string_map=k1:v1&string_map=k2:v2",
+	// map
+	checkParsingHappyPath(t, "string_map", "?string_map=k1:v1&string_map=k2:v2",
 		testOpts{StringMap: map[string]string{"k1": "v1", "k2": "v2"}})
-	// map OpenStack brace notation
-	checkParsingHappyPath(t, "string_map brace", "?string_map={'k1':'v1','k2':'v2'}",
-		testOpts{StringMap: map[string]string{"k1": "v1", "k2": "v2"}})
-	// map mixed notation (brace + plain k:v in separate query params)
-	checkParsingHappyPath(t, "string_map mixed", "?string_map={'k1':'v1','k2':'v2'}&string_map=k3:v3",
-		testOpts{StringMap: map[string]string{"k1": "v1", "k2": "v2", "k3": "v3"}})
-
-	// struct
-	checkParsingHappyPath(t, "struct", "?struct.name=foo&struct.age=42",
-		testOpts{Struct: testInnerOpts{Name: "foo", Age: 42}})
 
 	// time
 	checkParsingHappyPath(t, "time RFC3339Nano", "?time=2000-01-01T00:00:00.000000000Z",
@@ -145,14 +127,6 @@ func TestOptParserHappyPaths(t *testing.T) {
 
 	// time slice
 	checkParsingHappyPath(t, "slice time (all formats)", "?time_slice=2000-01-01T00:00:00.000000000Z&time_slice=2001-01-01T00:00:00Z&time_slice=2002-01-01%2000:00:00&time_slice=2003-01-01&time_slice=1072915200",
-		testOpts{TimeSlice: []time.Time{
-			time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC),
-			time.Date(2001, 1, 1, 0, 0, 0, 0, time.UTC),
-			time.Date(2002, 1, 1, 0, 0, 0, 0, time.UTC),
-			time.Date(2003, 1, 1, 0, 0, 0, 0, time.UTC),
-			time.Date(2004, 1, 1, 0, 0, 0, 0, time.UTC),
-		}})
-	checkParsingHappyPath(t, "slice time (all formats, comma-separated)", "?time_slice=2000-01-01T00:00:00.000000000Z,2001-01-01T00:00:00Z,2002-01-01%2000:00:00,2003-01-01,1072915200",
 		testOpts{TimeSlice: []time.Time{
 			time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC),
 			time.Date(2001, 1, 1, 0, 0, 0, 0, time.UTC),
@@ -190,8 +164,6 @@ func TestOptParserHappyPaths(t *testing.T) {
 	checkParsingHappyPath(t, "float64", "?float64=2.5", testOpts{Float64: 2.5})
 
 	// pointer scalars
-	checkParsingHappyPath(t, "pointer_struct", "?pointer_struct.name=bar&pointer_struct.age=7",
-		testOpts{PointerStruct: &testInnerOpts{Name: "bar", Age: 7}})
 	checkParsingHappyPath(t, "pointer_bool", "?pointer_bool=true", testOpts{PointerBool: new(true)})
 	checkParsingHappyPath(t, "pointer_string", "?pointer_string=world", testOpts{PointerString: new("world")})
 	checkParsingHappyPath(t, "pointer_int", "?pointer_int=7", testOpts{PointerInt: new(7)})
@@ -207,64 +179,34 @@ func TestOptParserHappyPaths(t *testing.T) {
 	checkParsingHappyPath(t, "pointer_float32", "?pointer_float32=3.14", testOpts{PointerFloat32: new(float32(3.14))})
 	checkParsingHappyPath(t, "pointer_float64", "?pointer_float64=2.718", testOpts{PointerFloat64: new(2.718)})
 
-	// slices (repeated keys)
-	checkParsingHappyPath(t, "bool_slice repeated", "?bool_slice=true&bool_slice=false&bool_slice=true",
+	// slices
+	checkParsingHappyPath(t, "bool_slice", "?bool_slice=true&bool_slice=false&bool_slice=true",
 		testOpts{BoolSlice: []bool{true, false, true}})
-	checkParsingHappyPath(t, "string_slice repeated", "?string_slice=a&string_slice=b&string_slice=c",
+	checkParsingHappyPath(t, "string_slice", "?string_slice=a&string_slice=b&string_slice=c",
 		testOpts{StringSlice: []string{"a", "b", "c"}})
-	checkParsingHappyPath(t, "int_slice repeated", "?int_slice=1&int_slice=2&int_slice=3",
+	checkParsingHappyPath(t, "int_slice", "?int_slice=1&int_slice=2&int_slice=3",
 		testOpts{IntSlice: []int{1, 2, 3}})
-	checkParsingHappyPath(t, "int8_slice repeated", "?int8_slice=1&int8_slice=2&int8_slice=3",
+	checkParsingHappyPath(t, "int8_slice", "?int8_slice=1&int8_slice=2&int8_slice=3",
 		testOpts{Int8Slice: []int8{1, 2, 3}})
-	checkParsingHappyPath(t, "int16_slice repeated", "?int16_slice=1&int16_slice=2&int16_slice=3",
+	checkParsingHappyPath(t, "int16_slice", "?int16_slice=1&int16_slice=2&int16_slice=3",
 		testOpts{Int16Slice: []int16{1, 2, 3}})
-	checkParsingHappyPath(t, "int32_slice repeated", "?int32_slice=1&int32_slice=2&int32_slice=3",
+	checkParsingHappyPath(t, "int32_slice", "?int32_slice=1&int32_slice=2&int32_slice=3",
 		testOpts{Int32Slice: []int32{1, 2, 3}})
-	checkParsingHappyPath(t, "int64_slice repeated", "?int64_slice=1&int64_slice=2&int64_slice=3",
+	checkParsingHappyPath(t, "int64_slice", "?int64_slice=1&int64_slice=2&int64_slice=3",
 		testOpts{Int64Slice: []int64{1, 2, 3}})
-	checkParsingHappyPath(t, "uint_slice repeated", "?uint_slice=1&uint_slice=2&uint_slice=3",
+	checkParsingHappyPath(t, "uint_slice", "?uint_slice=1&uint_slice=2&uint_slice=3",
 		testOpts{UintSlice: []uint{1, 2, 3}})
-	checkParsingHappyPath(t, "uint8_slice repeated", "?uint8_slice=1&uint8_slice=2&uint8_slice=3",
+	checkParsingHappyPath(t, "uint8_slice", "?uint8_slice=1&uint8_slice=2&uint8_slice=3",
 		testOpts{Uint8Slice: []uint8{1, 2, 3}})
-	checkParsingHappyPath(t, "uint16_slice repeated", "?uint16_slice=1&uint16_slice=2&uint16_slice=3",
+	checkParsingHappyPath(t, "uint16_slice", "?uint16_slice=1&uint16_slice=2&uint16_slice=3",
 		testOpts{Uint16Slice: []uint16{1, 2, 3}})
-	checkParsingHappyPath(t, "uint32_slice repeated", "?uint32_slice=1&uint32_slice=2&uint32_slice=3",
+	checkParsingHappyPath(t, "uint32_slice", "?uint32_slice=1&uint32_slice=2&uint32_slice=3",
 		testOpts{Uint32Slice: []uint32{1, 2, 3}})
-	checkParsingHappyPath(t, "uint64_slice repeated", "?uint64_slice=1&uint64_slice=2&uint64_slice=3",
+	checkParsingHappyPath(t, "uint64_slice", "?uint64_slice=1&uint64_slice=2&uint64_slice=3",
 		testOpts{Uint64Slice: []uint64{1, 2, 3}})
-	checkParsingHappyPath(t, "float32_slice repeated", "?float32_slice=1.5&float32_slice=2.5",
+	checkParsingHappyPath(t, "float32_slice", "?float32_slice=1.5&float32_slice=2.5",
 		testOpts{Float32Slice: []float32{1.5, 2.5}})
-	checkParsingHappyPath(t, "float64_slice repeated", "?float64_slice=1.5&float64_slice=2.5",
-		testOpts{Float64Slice: []float64{1.5, 2.5}})
-
-	// slices (comma-separated)
-	checkParsingHappyPath(t, "bool_slice comma", "?bool_slice=true,false,true",
-		testOpts{BoolSlice: []bool{true, false, true}})
-	checkParsingHappyPath(t, "string_slice comma", "?string_slice=a,b,c",
-		testOpts{StringSlice: []string{"a", "b", "c"}})
-	checkParsingHappyPath(t, "int_slice comma", "?int_slice=1,2,3",
-		testOpts{IntSlice: []int{1, 2, 3}})
-	checkParsingHappyPath(t, "int8_slice comma", "?int8_slice=1,2,3",
-		testOpts{Int8Slice: []int8{1, 2, 3}})
-	checkParsingHappyPath(t, "int16_slice comma", "?int16_slice=1,2,3",
-		testOpts{Int16Slice: []int16{1, 2, 3}})
-	checkParsingHappyPath(t, "int32_slice comma", "?int32_slice=1,2,3",
-		testOpts{Int32Slice: []int32{1, 2, 3}})
-	checkParsingHappyPath(t, "int64_slice comma", "?int64_slice=1,2,3",
-		testOpts{Int64Slice: []int64{1, 2, 3}})
-	checkParsingHappyPath(t, "uint_slice comma", "?uint_slice=1,2,3",
-		testOpts{UintSlice: []uint{1, 2, 3}})
-	checkParsingHappyPath(t, "uint8_slice comma", "?uint8_slice=1,2,3",
-		testOpts{Uint8Slice: []uint8{1, 2, 3}})
-	checkParsingHappyPath(t, "uint16_slice comma", "?uint16_slice=1,2,3",
-		testOpts{Uint16Slice: []uint16{1, 2, 3}})
-	checkParsingHappyPath(t, "uint32_slice comma", "?uint32_slice=1,2,3",
-		testOpts{Uint32Slice: []uint32{1, 2, 3}})
-	checkParsingHappyPath(t, "uint64_slice comma", "?uint64_slice=1,2,3",
-		testOpts{Uint64Slice: []uint64{1, 2, 3}})
-	checkParsingHappyPath(t, "float32_slice comma", "?float32_slice=1.5,2.5",
-		testOpts{Float32Slice: []float32{1.5, 2.5}})
-	checkParsingHappyPath(t, "float64_slice comma", "?float64_slice=1.5,2.5",
+	checkParsingHappyPath(t, "float64_slice", "?float64_slice=1.5&float64_slice=2.5",
 		testOpts{Float64Slice: []float64{1.5, 2.5}})
 
 	// Option scalars
@@ -308,43 +250,36 @@ func checkParsingPanic(t *testing.T, panicMsg string, fn func()) {
 
 func checkParsingError(t *testing.T, query, errMsg string) {
 	t.Helper()
-	var to testOpts
 	r := httptest.NewRequest(http.MethodGet, "/some/unimportant/path"+query, http.NoBody)
-	resultingError := opts.ParseQueryString(r, &to)
+	_, resultingError := opts.ParseQueryString[testOpts](r)
 	th.AssertErr(t, errMsg, resultingError)
 }
 
 func TestOptParserErrors(t *testing.T) {
-	// non-pointer or non-struct input (these panic)
+	// non-struct type parameter (panics)
 	r := httptest.NewRequest(http.MethodGet, "/some/unimportant/path", http.NoBody)
-	checkParsingPanic(t, "expected opts to be a non-nil pointer", func() {
-		opts.ParseQueryString(r, nil) //nolint:errcheck // won't get to this part
-	})
-	checkParsingPanic(t, "expected opts to be a non-nil pointer", func() {
-		opts.ParseQueryString(r, testOpts{}) //nolint:errcheck // won't get to this part
-	})
 	checkParsingPanic(t, "expected opts to point to a struct", func() {
-		opts.ParseQueryString(r, new(5)) //nolint:errcheck // won't get to this part
+		opts.ParseQueryString[int](r) //nolint:errcheck // won't get to this part
 	})
 
-	// incompatible struct (panics)
+	// missing q-tag (panics)
 	type testNonOpts struct {
 		String string `yaml:"string"`
 	}
 	checkParsingPanic(t, `expected "String" to have a "q:"-tag`, func() {
-		opts.ParseQueryString(r, &testNonOpts{}) //nolint:errcheck // won't get to this part
+		opts.ParseQueryString[testNonOpts](r) //nolint:errcheck // won't get to this part
 	})
 
 	// missing required parameter
 	type testStringRequiredOpts struct {
-		String string `q:"string" required:"true"`
+		String string `q:"string,required"`
 	}
-	resultingError := opts.ParseQueryString(r, &testStringRequiredOpts{})
+	_, resultingError := opts.ParseQueryString[testStringRequiredOpts](r)
 	th.AssertErr(t, `missing value for query parameter "string"`, resultingError)
 	type testStringSliceRequiredOpts struct {
-		StringSlice []string `q:"string_slice" required:"true"`
+		StringSlice []string `q:"string_slice,required"`
 	}
-	resultingError = opts.ParseQueryString(r, &testStringSliceRequiredOpts{})
+	_, resultingError = opts.ParseQueryString[testStringSliceRequiredOpts](r)
 	th.AssertErr(t, `missing value for query parameter "string_slice"`, resultingError)
 
 	// unknown parameter
@@ -370,28 +305,17 @@ func TestOptParserErrors(t *testing.T) {
 	checkParsingError(t, "?option_bool=foo", `invalid value for query parameter "option_bool": strconv.ParseBool: parsing "foo": invalid syntax`)
 	checkParsingError(t, "?bool_slice=foo", `invalid value for query parameter "bool_slice": element 0: strconv.ParseBool: parsing "foo": invalid syntax`)
 
-	// wrong format: slices
-	r = httptest.NewRequest(http.MethodGet, "/some/unimportant/path?string_slice=a&string_slice=b", http.NoBody)
-	type testSliceFormatOpts struct {
-		StringSlice []string `q:"string_slice" format:"comma-separated"`
-	}
-	resultingError = opts.ParseQueryString(r, &testSliceFormatOpts{})
-	th.AssertErr(t, `query parameter "string_slice" uses comma-separated format, but was provided as repeated keys`, resultingError)
-	r = httptest.NewRequest(http.MethodGet, "/some/unimportant/path?string_slice=a,b,c,d&string_slice=e", http.NoBody)
-	resultingError = opts.ParseQueryString(r, &testSliceFormatOpts{})
-	th.AssertErr(t, `query parameter "string_slice" uses comma-separated format, but was provided as repeated keys`, resultingError)
-
 	// wrong format: time
 	r = httptest.NewRequest(http.MethodGet, "/some/unimportant/path?time=2000-01-01%2000:00", http.NoBody)
 	type testImpossibleTimeFormatOpts struct {
-		Time time.Time `q:"time" format:"foo"`
+		Time time.Time `q:"time,format:foo"`
 	}
-	resultingError = opts.ParseQueryString(r, &testImpossibleTimeFormatOpts{})
+	_, resultingError = opts.ParseQueryString[testImpossibleTimeFormatOpts](r)
 	th.AssertErr(t, `unsupported time format "foo"; accepted: DateOnly, DateTime, RFC3339, RFC3339Nano, Unix`, resultingError)
 	type testTimeFormatOpts struct {
-		Time time.Time `q:"time" format:"RFC3339"`
+		Time time.Time `q:"time,format:RFC3339"`
 	}
-	resultingError = opts.ParseQueryString(r, &testTimeFormatOpts{})
+	_, resultingError = opts.ParseQueryString[testTimeFormatOpts](r)
 	th.AssertErr(t, `invalid value for query parameter "time": cannot parse "2000-01-01 00:00" as RFC3339: parsing time "2000-01-01 00:00" as "2006-01-02T15:04:05Z07:00": cannot parse " 00:00" as "T"`, resultingError)
 
 	// wrong type: numbers
