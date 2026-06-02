@@ -12,18 +12,16 @@ import (
 )
 
 var (
-	// timeFormats lists all allowed formats, except "Unix" which is handled separately.
-	timeFormats = map[string]string{
+	// TimeFormats lists all allowed formats supported by the time package, except "Unix" (see below).
+	TimeFormats = map[string]string{
 		"RFC3339Nano": time.RFC3339Nano,
 		"RFC3339":     time.RFC3339,
 		"DateTime":    time.DateTime,
 		"DateOnly":    time.DateOnly,
 	}
-	supportedHumanReadableFormats = strings.Join(slices.Sorted(maps.Keys(timeFormats)), ", ")
-)
-
-const (
-	unixFormat = "Unix"
+	// UnixFormat is an identifier for the time to be interpreted as unix-seconds since epoch.
+	UnixFormat                    = "Unix"
+	supportedHumanReadableFormats = strings.Join(slices.Sorted(maps.Keys(TimeFormats)), ", ") + ", " + UnixFormat
 )
 
 // parseQTag parses a q struct tag value into its key name, optional format, and required flag.

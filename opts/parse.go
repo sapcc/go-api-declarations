@@ -4,19 +4,16 @@
 package opts
 
 import (
-	"errors"
 	"fmt"
-	"net/http"
+	"net/url"
 	"reflect"
 	"slices"
 	"strconv"
 	"strings"
 	"time"
-
-	. "go.xyrillian.de/gg/option"
 )
 
-// ParseQueryString parses the query parameters of a *http.Request into an opt struct.
+// ParseQueryString parses the query parameters of url.Values into an opt struct.
 // Fields are mapped by their "q" tag, mirroring the behavior of [opts.BuildQueryString].
 // For example:
 //
@@ -25,7 +22,11 @@ import (
 //	   Baz int    `q:"lorem_ipsum"`
 //	}
 //
-// and a request with the query string "?x_bar=AAA&lorem_ipsum=BBB" will produce
+// and a request with the query string
+//
+//	?x_bar=AAA&lorem_ipsum=BBB
+//
+// will produce
 //
 //	result := Something{
 //	   Bar: "AAA",
@@ -37,25 +38,31 @@ import (
 // failure, missing required field) an error is returned. On success, the returned
 // opts are populated according to the http.Request.
 //
-// The parser supports all scalars except complex. Structs of scalars are supported
-// and special structs like time.Time. Additionally, it allows Slices (for multiple
-// values), option.Option (recommended for optional values) and pointers (as alternative
-// to option.Option) of these. Only map[string]string is supported as a map type.
+// The parser supports all scalars except complex. Additionally, it allows Slices
+// (for multiple values), [option.Option] (recommended for optional values) and
+// pointers (as alternative to [option.Option]) of these. Only map[string]string
+// is supported as a map type. Embedded structs and [time.Time] are supported.
 // Some inputs might work but are untested.
 //
 // Slice fields use repeated query parameters:
-// Foo []string `q:"foo"`                       // ?foo=a&foo=b
+//
+//	Foo []string `q:"foo"`                       // ?foo=a&foo=b
 //
 // Map fields accept plain repeated key:value pairs:
-// Bar map[string]string `q:"bar"`              // ?bar=k1:v1&bar=k2:v2
 //
-// time.Time fields support the formats RFC3339Nano, RFC3339, DateTime, Date, Unix.
-// A single `format` option can be set, to limit what the parser accepts:
-// Baz time.Time `q:"baz,format:RFC3339"`       // ?baz=1999-01-01T00:00:00
+//	Bar map[string]string `q:"bar"`              // ?bar=k1:v1&bar=k2:v2
 //
-// A `required` option can be set to define that a missing value will produce an error.
-// Quux string `q:"quux,required"`               // ?foo=bar --> error
-func ParseQueryString[T any](r *http.Request) (T, error) {
+// [time.Time] fields support the formats defined under [opts.TimeFormats].
+// A single "format" option must be set, to limit what the parser accepts:
+//
+//	Baz time.Time `q:"baz,format:RFC3339"`       // ?baz=1999-01-01T00:00:00
+//
+// A "required" option can be set to define that a missing value will produce an error.
+//
+//	Quux string `q:"quux,required"`               // ?foo=bar --> error
+//
+// [option.Option]: https://pkg.go.dev/go.xyrillian.de/gg/option#Option
+func ParseQueryString[T any](query url.Values) (T, error) {
 	var opts T
 	optsValue := reflect.ValueOf(&opts).Elem()
 	if optsValue.Kind() != reflect.Struct {
@@ -65,46 +72,53 @@ func ParseQueryString[T any](r *http.Request) (T, error) {
 	// build map of q-tags to field values
 	optsType := optsValue.Type()
 	type optMeta struct {
-		index             int
-		format            string // "" or time-formats
+		structField       reflect.StructField
+		fieldValue        reflect.Value
+		timeFormat        string // "" or time-formats
 		requiredAndUnseen bool
 	}
 	knownOpts := make(map[string]optMeta, optsType.NumField())
-	for i := range optsType.NumField() {
-		field := optsType.Field(i)
-		fieldValue := optsValue.Field(i)
+	for _, field := range reflect.VisibleFields(optsType) {
+		fieldValue := optsValue.FieldByIndex(field.Index)
 		qTag := field.Tag.Get("q")
+		if field.Anonymous {
+			// this is for struct embedding to work
+			if qTag != "" {
+				panic(fmt.Sprintf(`expected embedded struct %q to have no "q:"-tag`, field.Name))
+			}
+			continue
+		}
 		if qTag == "" {
 			panic(fmt.Sprintf(`expected %q to have a "q:"-tag`, field.Name))
 		}
-		optKey, format, required := parseQTag(qTag)
+		optKey, timeFormat, required := parseQTag(qTag)
 		if !fieldValue.CanSet() {
 			panic(fmt.Sprintf(`field %q is unexported and therefore cannot be set`, optKey))
 		}
-		// When format is set, it must be a known time format.
-		if _, ok := timeFormats[format]; format != "" && format != unixFormat && !ok {
-			return opts, fmt.Errorf("unsupported time format %q; accepted: %s, %s", format, supportedHumanReadableFormats, unixFormat)
+		// all known formats are currently timeFormats
+		if _, ok := TimeFormats[timeFormat]; timeFormat != "" && timeFormat != UnixFormat && !ok {
+			panic(fmt.Sprintf("unsupported time format %q; accepted: %s", timeFormat, supportedHumanReadableFormats))
 		}
 		knownOpts[optKey] = optMeta{
-			index:             i,
-			format:            format,
-			requiredAndUnseen: required}
+			structField:       field,
+			fieldValue:        fieldValue,
+			timeFormat:        timeFormat,
+			requiredAndUnseen: required,
+		}
 	}
 
 	// iterate the query
-	query := r.URL.Query()
 	for optKey, rawValues := range query {
 		meta, ok := knownOpts[optKey]
 		if !ok {
 			return opts, fmt.Errorf("unknown query parameter %q", optKey)
 		}
-		fieldValue := optsValue.Field(meta.index)
 		// now, just set the value of the field accordingly
-		err := setField(fieldValue, rawValues, meta.format)
+		err := setField(meta.structField, meta.fieldValue, rawValues, meta.timeFormat)
 		if err != nil {
 			return opts, fmt.Errorf("invalid value for query parameter %q: %w", optKey, err)
 		}
-		if !isZero(fieldValue) && meta.requiredAndUnseen {
+		if !isZero(meta.fieldValue) && meta.requiredAndUnseen {
 			meta.requiredAndUnseen = false
 			knownOpts[optKey] = meta
 		}
@@ -120,8 +134,12 @@ func ParseQueryString[T any](r *http.Request) (T, error) {
 }
 
 // setField writes values into a single struct field.
-// The format parameter carries the format option from the q tag (may be empty).
-func setField(fv reflect.Value, values []string, format string) error {
+// The timeFormat parameter carries the format option from the q tag (may be empty).
+func setField(f reflect.StructField, fv reflect.Value, values []string, timeFormat string) error {
+	if len(values) == 0 {
+		return nil
+	}
+
 	// unwrap pointer: allocate if nil
 	if fv.Kind() == reflect.Pointer {
 		if fv.IsNil() {
@@ -130,15 +148,12 @@ func setField(fv reflect.Value, values []string, format string) error {
 		fv = fv.Elem()
 	}
 
-	// Handle Option[T] fields: detected by the presence of an IsSome() bool method.
+	// handle Option[T] fields: detected by the presence of an IsSome() method
 	// We parse into a temporary value of the inner type by recursing into setField,
 	// then use UnmarshalYAML to set the Option value directly.
 	if _, isOption := fv.Type().MethodByName("IsSome"); isOption {
-		if len(values) == 0 {
-			return nil // leave as None (zero value)
-		}
 		tmp := reflect.New(fv.Type().Field(0).Type).Elem()
-		if err := setField(tmp, values, format); err != nil {
+		if err := setField(f, tmp, values, timeFormat); err != nil {
 			return err
 		}
 		unmarshal := func(dest any) error {
@@ -166,14 +181,12 @@ func setField(fv reflect.Value, values []string, format string) error {
 		}
 	}
 
-	// Handle time.Time fields: if a format is specified, use only that format;
-	// otherwise try multiple formats in order of specificity.
+	// handle time.Time fields
 	if fv.Type() == reflect.TypeFor[time.Time]() {
-		var formatOpt Option[string]
-		if format != "" {
-			formatOpt = Some(format)
+		if timeFormat == "" {
+			panic("time format is missing for field " + f.Name)
 		}
-		t, err := parseTime(values[0], formatOpt)
+		t, err := parseTime(values[0], timeFormat)
 		if err != nil {
 			return err
 		}
@@ -183,164 +196,125 @@ func setField(fv reflect.Value, values []string, format string) error {
 
 	// set scalars
 	switch fv.Kind() {
-	case reflect.String:
-		fv.SetString(values[0])
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		n, err := strconv.ParseInt(values[0], 10, fv.Type().Bits())
+	case reflect.String, reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64,
+		reflect.Bool, reflect.Float32, reflect.Float64:
+		v, err := parseScalar(values[0], fv.Type())
 		if err != nil {
 			return err
 		}
-		fv.SetInt(n)
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		n, err := strconv.ParseUint(values[0], 10, fv.Type().Bits())
-		if err != nil {
-			return err
-		}
-		fv.SetUint(n)
-	case reflect.Bool:
-		b, err := strconv.ParseBool(values[0])
-		if err != nil {
-			return err
-		}
-		fv.SetBool(b)
-	case reflect.Float32, reflect.Float64:
-		f, err := strconv.ParseFloat(values[0], fv.Type().Bits())
-		if err != nil {
-			return err
-		}
-		fv.SetFloat(f)
+		fv.Set(v)
 	// set slices
 	case reflect.Slice:
 		elemType := fv.Type().Elem()
-		switch elemType.Kind() {
-		case reflect.String:
+		if elemType == reflect.TypeFor[time.Time]() {
 			sl := reflect.MakeSlice(fv.Type(), len(values), len(values))
 			for i, v := range values {
-				sl.Index(i).SetString(v)
-			}
-			fv.Set(sl)
-		case reflect.Bool:
-			sl := reflect.MakeSlice(fv.Type(), len(values), len(values))
-			for i, v := range values {
-				b, err := strconv.ParseBool(v)
-				if err != nil {
-					return fmt.Errorf("element %d: %w", i, err)
-				}
-				sl.Index(i).SetBool(b)
-			}
-			fv.Set(sl)
-		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-			sl := reflect.MakeSlice(fv.Type(), len(values), len(values))
-			for i, v := range values {
-				n, err := strconv.ParseInt(v, 10, elemType.Bits())
-				if err != nil {
-					return fmt.Errorf("element %d: %w", i, err)
-				}
-				sl.Index(i).SetInt(n)
-			}
-			fv.Set(sl)
-		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-			sl := reflect.MakeSlice(fv.Type(), len(values), len(values))
-			for i, v := range values {
-				n, err := strconv.ParseUint(v, 10, elemType.Bits())
-				if err != nil {
-					return fmt.Errorf("element %d: %w", i, err)
-				}
-				sl.Index(i).SetUint(n)
-			}
-			fv.Set(sl)
-		case reflect.Float32, reflect.Float64:
-			sl := reflect.MakeSlice(fv.Type(), len(values), len(values))
-			for i, v := range values {
-				f, err := strconv.ParseFloat(v, elemType.Bits())
-				if err != nil {
-					return fmt.Errorf("element %d: %w", i, err)
-				}
-				sl.Index(i).SetFloat(f)
-			}
-			fv.Set(sl)
-		case reflect.Struct:
-			if elemType != reflect.TypeFor[time.Time]() {
-				return fmt.Errorf("unsupported slice element type %s", elemType)
-			}
-			sl := reflect.MakeSlice(fv.Type(), len(values), len(values))
-			for i, v := range values {
-				var formatOpt Option[string]
-				if format != "" {
-					formatOpt = Some(format)
-				}
-				t, err := parseTime(v, formatOpt)
+				t, err := parseTime(v, timeFormat)
 				if err != nil {
 					return fmt.Errorf("element %d: %w", i, err)
 				}
 				sl.Index(i).Set(reflect.ValueOf(t))
 			}
 			fv.Set(sl)
-		default:
-			return fmt.Errorf("unsupported slice element type %s", elemType)
+		} else {
+			sl := reflect.MakeSlice(fv.Type(), len(values), len(values))
+			for i, v := range values {
+				elem, err := parseScalar(v, elemType)
+				if err != nil {
+					return fmt.Errorf("element %d: %w", i, err)
+				}
+				sl.Index(i).Set(elem)
+			}
+			fv.Set(sl)
 		}
 	// set maps
 	case reflect.Map:
-		if fv.Type().Key().Kind() != reflect.String || fv.Type().Elem().Kind() != reflect.String {
-			return errors.New("only map[string]string is supported")
-		}
-		m, err := parseMapValues(values)
+		m, err := parseMapValues(values, fv.Type().Key(), fv.Type().Elem())
 		if err != nil {
 			return err
 		}
-		fv.Set(reflect.ValueOf(m))
+		fv.Set(m)
 	default:
 		return fmt.Errorf("unsupported field type %s", fv.Type())
 	}
 	return nil
 }
 
-// parseMapValues parses a list of raw string values into a map[string]string.
-// It supports a repeated key:value notation (?m=k1:v1&m=k2:v2).
-func parseMapValues(values []string) (map[string]string, error) {
-	m := make(map[string]string)
+// parseScalar parses a single string into a reflect.Value of the given type.
+// Supported kinds: string, int*, uint*, float*, bool.
+func parseScalar(s string, t reflect.Type) (reflect.Value, error) {
+	v := reflect.New(t).Elem()
+	switch t.Kind() {
+	case reflect.String:
+		v.SetString(s)
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		n, err := strconv.ParseInt(s, 10, t.Bits())
+		if err != nil {
+			return reflect.Value{}, err
+		}
+		v.SetInt(n)
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		n, err := strconv.ParseUint(s, 10, t.Bits())
+		if err != nil {
+			return reflect.Value{}, err
+		}
+		v.SetUint(n)
+	case reflect.Float32, reflect.Float64:
+		f, err := strconv.ParseFloat(s, t.Bits())
+		if err != nil {
+			return reflect.Value{}, err
+		}
+		v.SetFloat(f)
+	case reflect.Bool:
+		b, err := strconv.ParseBool(s)
+		if err != nil {
+			return reflect.Value{}, err
+		}
+		v.SetBool(b)
+	default:
+		return reflect.Value{}, fmt.Errorf("unsupported type %s", t)
+	}
+	return v, nil
+}
+
+// parseMapValues parses a list of raw string values into a map with the given key and value types.
+// Each value must be in "key:value" notation (e.g. ?m=k1:v1&m=k2:v2).
+func parseMapValues(values []string, keyType, valType reflect.Type) (reflect.Value, error) {
+	m := reflect.MakeMap(reflect.MapOf(keyType, valType))
 	for _, raw := range values {
 		raw = strings.TrimSpace(raw)
 		kv := strings.SplitN(raw, ":", 2)
 		if len(kv) != 2 {
-			return nil, fmt.Errorf("invalid map entry %q: expected key:value", raw)
+			return reflect.Value{}, fmt.Errorf("invalid map entry %q: expected key:value", raw)
 		}
-		m[kv[0]] = kv[1]
+		key, err := parseScalar(kv[0], keyType)
+		if err != nil {
+			return reflect.Value{}, fmt.Errorf("invalid map key %q: %w", kv[0], err)
+		}
+		val, err := parseScalar(kv[1], valType)
+		if err != nil {
+			return reflect.Value{}, fmt.Errorf("invalid map value %q: %w", kv[1], err)
+		}
+		m.SetMapIndex(key, val)
 	}
 	return m, nil
 }
 
-// parseTime parses a time string. If format is Some, only that specific format
-// is accepted (one of "RFC3339Nano", "RFC3339", "DateTime", "DateOnly", "Unix").
-// If format is None, all formats are tried in order of specificity.
-func parseTime(s string, format Option[string]) (time.Time, error) {
-	if f, ok := format.Unpack(); ok {
-		if f == "Unix" {
-			n, err := strconv.ParseInt(s, 10, 64)
-			if err != nil {
-				return time.Time{}, fmt.Errorf("cannot parse %q as %s seconds: %w", s, unixFormat, err)
-			}
-			return time.Unix(n, 0).UTC(), nil
-		}
-		// we checked this already when building knownOpts
-		layout := timeFormats[f]
-		t, err := time.Parse(layout, s)
+// parseTime parses a time string. Accepted formats are defined in opts.TimeFormats.
+func parseTime(s, timeFormat string) (time.Time, error) {
+	if timeFormat == UnixFormat {
+		n, err := strconv.ParseInt(s, 10, 64)
 		if err != nil {
-			return time.Time{}, fmt.Errorf("cannot parse %q as %s: %w", s, f, err)
+			return time.Time{}, fmt.Errorf("cannot parse %q as %s seconds: %w", s, UnixFormat, err)
 		}
-		return t, nil
-	}
-
-	// No specific format — try all in order
-	for _, layout := range timeFormats {
-		t, err := time.Parse(layout, s)
-		if err == nil {
-			return t, nil
-		}
-	}
-	// Try Unix timestamp (non-negative seconds since epoch)
-	if n, err := strconv.ParseInt(s, 10, 64); err == nil {
 		return time.Unix(n, 0).UTC(), nil
 	}
-	return time.Time{}, fmt.Errorf("cannot parse %q as time; accepted: %s, %s", s, supportedHumanReadableFormats, unixFormat)
+	// we checked this already when building knownOpts
+	layout := TimeFormats[timeFormat]
+	t, err := time.Parse(layout, s)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("cannot parse %q as %s: %w", s, timeFormat, err)
+	}
+	return t, nil
 }

@@ -34,8 +34,13 @@ func TestBuildQueryStringHappyPaths(t *testing.T) {
 	// empty struct (all zero values omitted)
 	checkSerializingHappyPath(t, "empty", testOpts{}, "")
 
+	// embedded string
+	checkSerializingHappyPath(t, "embedded_string", testOpts{EmbeddedOpts: EmbeddedOpts{EmbeddedString: "hello"}}, "embedded_string=hello")
+
 	// map
 	checkSerializingHappyPath(t, "string_map", testOpts{StringMap: map[string]string{"k1": "v1", "k2": "v2"}}, "string_map=k1%3Av1&string_map=k2%3Av2")
+	checkSerializingHappyPath(t, "int_string_map", testOpts{IntStringMap: map[int]string{1: "foo", 2: "bar"}}, "int_string_map=1%3Afoo&int_string_map=2%3Abar")
+	checkSerializingHappyPath(t, "string_int_map", testOpts{StringIntMap: map[string]int{"foo": 1, "bar": 2}}, "string_int_map=bar%3A2&string_int_map=foo%3A1")
 
 	// time
 	checkSerializingHappyPath(t, "time",
@@ -175,8 +180,16 @@ func TestBuildQueryStringErrors(t *testing.T) {
 	type testNonOpts struct {
 		String string `yaml:"string"`
 	}
-	checkParsingPanic(t, `expected "String" to have a "q:"-tag`, func() {
+	checkSerializingPanic(t, `expected "String" to have a "q:"-tag`, func() {
 		opts.BuildQueryString(testNonOpts{}) //nolint:errcheck // won't get to this part
+	})
+
+	// embedded struct with q-tag (panics)
+	type testEmbeddedQTagOpts struct {
+		EmbeddedOpts `q:"embedded"`
+	}
+	checkSerializingPanic(t, `expected embedded struct "EmbeddedOpts" to have no "q:"-tag`, func() {
+		opts.BuildQueryString(testEmbeddedQTagOpts{}) //nolint:errcheck // won't get to this part
 	})
 
 	// unknown struct parameter (panics)
@@ -186,7 +199,7 @@ func TestBuildQueryStringErrors(t *testing.T) {
 	type testNested2 struct {
 		Nested testNested `q:"nested"`
 	}
-	checkParsingPanic(t, "for structs only time.Time and implementers of isZeroer are supported", func() {
+	checkSerializingPanic(t, "for structs only time.Time and implementers of isZeroer are supported", func() {
 		opts.BuildQueryString(testNested2{}) //nolint:errcheck // won't get to this part
 	})
 
@@ -194,7 +207,7 @@ func TestBuildQueryStringErrors(t *testing.T) {
 	type testBadTimeFormatOpts struct {
 		Time time.Time `q:"time,format:foo"`
 	}
-	checkSerializingPanic(t, "unknown time format foo", func() {
+	checkSerializingPanic(t, `unsupported time format "foo"; accepted: DateOnly, DateTime, RFC3339, RFC3339Nano, Unix`, func() {
 		opts.BuildQueryString(testBadTimeFormatOpts{Time: time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC)}) //nolint:errcheck // won't get to this part
 	})
 

@@ -19,10 +19,17 @@ import (
 	"github.com/sapcc/go-api-declarations/opts"
 )
 
+type EmbeddedOpts struct {
+	EmbeddedString string `q:"embedded_string"`
+}
+
 type testOpts struct {
+	EmbeddedOpts
 	StringMap      map[string]string `q:"string_map"`
+	IntStringMap   map[int]string    `q:"int_string_map"`
+	StringIntMap   map[string]int    `q:"string_int_map"`
 	Bool           bool              `q:"bool"`
-	Time           time.Time         `q:"time"`
+	Time           time.Time         `q:"time,format:RFC3339"`
 	String         string            `q:"string"`
 	Int            int               `q:"int"`
 	Int8           int8              `q:"int8"`
@@ -37,7 +44,7 @@ type testOpts struct {
 	Float32        float32           `q:"float32"`
 	Float64        float64           `q:"float64"`
 	PointerBool    *bool             `q:"pointer_bool"`
-	PointerTime    *time.Time        `q:"pointer_time"`
+	PointerTime    *time.Time        `q:"pointer_time,format:RFC3339"`
 	PointerString  *string           `q:"pointer_string"`
 	PointerInt     *int              `q:"pointer_int"`
 	PointerInt8    *int8             `q:"pointer_int8"`
@@ -52,7 +59,7 @@ type testOpts struct {
 	PointerFloat32 *float32          `q:"pointer_float32"`
 	PointerFloat64 *float64          `q:"pointer_float64"`
 	BoolSlice      []bool            `q:"bool_slice"`
-	TimeSlice      []time.Time       `q:"time_slice"`
+	TimeSlice      []time.Time       `q:"time_slice,format:RFC3339"`
 	StringSlice    []string          `q:"string_slice"`
 	IntSlice       []int             `q:"int_slice"`
 	Int8Slice      []int8            `q:"int8_slice"`
@@ -67,7 +74,7 @@ type testOpts struct {
 	Float32Slice   []float32         `q:"float32_slice"`
 	Float64Slice   []float64         `q:"float64_slice"`
 	OptionBool     Option[bool]      `q:"option_bool"`
-	OptionTime     Option[time.Time] `q:"option_time"`
+	OptionTime     Option[time.Time] `q:"option_time,format:RFC3339"`
 	OptionString   Option[string]    `q:"option_string"`
 	OptionInt      Option[int]       `q:"option_int"`
 	OptionInt8     Option[int8]      `q:"option_int8"`
@@ -86,7 +93,7 @@ type testOpts struct {
 func checkParsingHappyPath(t *testing.T, variable, query string, result testOpts) {
 	t.Helper()
 	r := httptest.NewRequest(http.MethodGet, "/some/unimportant/path"+query, http.NoBody)
-	to, err := opts.ParseQueryString[testOpts](r)
+	to, err := opts.ParseQueryString[testOpts](r.URL.Query())
 	if err != nil {
 		t.Fatal(variable + ": " + err.Error())
 	}
@@ -97,54 +104,36 @@ func TestOptParserHappyPaths(t *testing.T) {
 	// empty query
 	checkParsingHappyPath(t, "empty opts", "", testOpts{})
 
+	// embedded string
+	checkParsingHappyPath(t, "embedded_string", "?embedded_string=hello",
+		testOpts{EmbeddedOpts: EmbeddedOpts{EmbeddedString: "hello"}})
+
 	// map
 	checkParsingHappyPath(t, "string_map", "?string_map=k1:v1&string_map=k2:v2",
 		testOpts{StringMap: map[string]string{"k1": "v1", "k2": "v2"}})
+	checkParsingHappyPath(t, "int_string_map", "?int_string_map=1:foo&int_string_map=2:bar",
+		testOpts{IntStringMap: map[int]string{1: "foo", 2: "bar"}})
+	checkParsingHappyPath(t, "string_int_map", "?string_int_map=foo:1&string_int_map=bar:2",
+		testOpts{StringIntMap: map[string]int{"foo": 1, "bar": 2}})
 
 	// time
-	checkParsingHappyPath(t, "time RFC3339Nano", "?time=2000-01-01T00:00:00.000000000Z",
-		testOpts{Time: time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC)})
 	checkParsingHappyPath(t, "time RFC3339", "?time=2000-01-01T00:00:00Z",
-		testOpts{Time: time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC)})
-	checkParsingHappyPath(t, "time DateTime", "?time=2000-01-01%2000:00:00",
-		testOpts{Time: time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC)})
-	checkParsingHappyPath(t, "time Date", "?time=2000-01-01",
-		testOpts{Time: time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC)})
-	checkParsingHappyPath(t, "time Unix", "?time=946684800",
 		testOpts{Time: time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC)})
 
 	// pointer time
-	checkParsingHappyPath(t, "pointer time RFC3339Nano", "?pointer_time=2000-01-01T00:00:00.000000000Z",
-		testOpts{PointerTime: new(time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC))})
 	checkParsingHappyPath(t, "pointer time RFC3339", "?pointer_time=2000-01-01T00:00:00Z",
-		testOpts{PointerTime: new(time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC))})
-	checkParsingHappyPath(t, "pointer time DateTime", "?pointer_time=2000-01-01%2000:00:00",
-		testOpts{PointerTime: new(time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC))})
-	checkParsingHappyPath(t, "pointer time Date", "?pointer_time=2000-01-01",
-		testOpts{PointerTime: new(time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC))})
-	checkParsingHappyPath(t, "pointer time Unix", "?pointer_time=946684800",
 		testOpts{PointerTime: new(time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC))})
 
 	// time slice
-	checkParsingHappyPath(t, "slice time (all formats)", "?time_slice=2000-01-01T00:00:00.000000000Z&time_slice=2001-01-01T00:00:00Z&time_slice=2002-01-01%2000:00:00&time_slice=2003-01-01&time_slice=1072915200",
+	checkParsingHappyPath(t, "slice time RFC3339", "?time_slice=2000-01-01T00:00:00Z&time_slice=2001-01-01T00:00:00Z&time_slice=2002-01-01T00:00:00Z",
 		testOpts{TimeSlice: []time.Time{
 			time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC),
 			time.Date(2001, 1, 1, 0, 0, 0, 0, time.UTC),
 			time.Date(2002, 1, 1, 0, 0, 0, 0, time.UTC),
-			time.Date(2003, 1, 1, 0, 0, 0, 0, time.UTC),
-			time.Date(2004, 1, 1, 0, 0, 0, 0, time.UTC),
 		}})
 
 	// option time
-	checkParsingHappyPath(t, "option time RFC3339Nano", "?option_time=2000-01-01T00:00:00.000000000Z",
-		testOpts{OptionTime: Some(time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC))})
 	checkParsingHappyPath(t, "option time RFC3339", "?option_time=2000-01-01T00:00:00Z",
-		testOpts{OptionTime: Some(time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC))})
-	checkParsingHappyPath(t, "option time DateTime", "?option_time=2000-01-01%2000:00:00",
-		testOpts{OptionTime: Some(time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC))})
-	checkParsingHappyPath(t, "option time Date", "?option_time=2000-01-01",
-		testOpts{OptionTime: Some(time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC))})
-	checkParsingHappyPath(t, "option time Unix", "?option_time=946684800",
 		testOpts{OptionTime: Some(time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC))})
 
 	// plain scalars
@@ -251,7 +240,7 @@ func checkParsingPanic(t *testing.T, panicMsg string, fn func()) {
 func checkParsingError(t *testing.T, query, errMsg string) {
 	t.Helper()
 	r := httptest.NewRequest(http.MethodGet, "/some/unimportant/path"+query, http.NoBody)
-	_, resultingError := opts.ParseQueryString[testOpts](r)
+	_, resultingError := opts.ParseQueryString[testOpts](r.URL.Query())
 	th.AssertErr(t, errMsg, resultingError)
 }
 
@@ -259,7 +248,7 @@ func TestOptParserErrors(t *testing.T) {
 	// non-struct type parameter (panics)
 	r := httptest.NewRequest(http.MethodGet, "/some/unimportant/path", http.NoBody)
 	checkParsingPanic(t, "expected opts to point to a struct", func() {
-		opts.ParseQueryString[int](r) //nolint:errcheck // won't get to this part
+		opts.ParseQueryString[int](r.URL.Query()) //nolint:errcheck // won't get to this part
 	})
 
 	// missing q-tag (panics)
@@ -267,19 +256,27 @@ func TestOptParserErrors(t *testing.T) {
 		String string `yaml:"string"`
 	}
 	checkParsingPanic(t, `expected "String" to have a "q:"-tag`, func() {
-		opts.ParseQueryString[testNonOpts](r) //nolint:errcheck // won't get to this part
+		opts.ParseQueryString[testNonOpts](r.URL.Query()) //nolint:errcheck // won't get to this part
+	})
+
+	// embedded struct with q-tag (panics)
+	type testEmbeddedQTagOpts struct {
+		EmbeddedOpts `q:"embedded"`
+	}
+	checkParsingPanic(t, `expected embedded struct "EmbeddedOpts" to have no "q:"-tag`, func() {
+		opts.ParseQueryString[testEmbeddedQTagOpts](r.URL.Query()) //nolint:errcheck // won't get to this part
 	})
 
 	// missing required parameter
 	type testStringRequiredOpts struct {
 		String string `q:"string,required"`
 	}
-	_, resultingError := opts.ParseQueryString[testStringRequiredOpts](r)
+	_, resultingError := opts.ParseQueryString[testStringRequiredOpts](r.URL.Query())
 	th.AssertErr(t, `missing value for query parameter "string"`, resultingError)
 	type testStringSliceRequiredOpts struct {
 		StringSlice []string `q:"string_slice,required"`
 	}
-	_, resultingError = opts.ParseQueryString[testStringSliceRequiredOpts](r)
+	_, resultingError = opts.ParseQueryString[testStringSliceRequiredOpts](r.URL.Query())
 	th.AssertErr(t, `missing value for query parameter "string_slice"`, resultingError)
 
 	// unknown parameter
@@ -289,10 +286,10 @@ func TestOptParserErrors(t *testing.T) {
 	checkParsingError(t, "?string_map=foo", `invalid value for query parameter "string_map": invalid map entry "foo": expected key:value`)
 
 	// wrong type: time
-	checkParsingError(t, "?time=foo", `invalid value for query parameter "time": cannot parse "foo" as time; accepted: DateOnly, DateTime, RFC3339, RFC3339Nano, Unix`)
-	checkParsingError(t, "?pointer_time=foo", `invalid value for query parameter "pointer_time": cannot parse "foo" as time; accepted: DateOnly, DateTime, RFC3339, RFC3339Nano, Unix`)
-	checkParsingError(t, "?time_slice=foo", `invalid value for query parameter "time_slice": element 0: cannot parse "foo" as time; accepted: DateOnly, DateTime, RFC3339, RFC3339Nano, Unix`)
-	checkParsingError(t, "?option_time=foo", `invalid value for query parameter "option_time": cannot parse "foo" as time; accepted: DateOnly, DateTime, RFC3339, RFC3339Nano, Unix`)
+	checkParsingError(t, "?time=foo", `invalid value for query parameter "time": cannot parse "foo" as RFC3339: parsing time "foo" as "2006-01-02T15:04:05Z07:00": cannot parse "foo" as "2006"`)
+	checkParsingError(t, "?pointer_time=foo", `invalid value for query parameter "pointer_time": cannot parse "foo" as RFC3339: parsing time "foo" as "2006-01-02T15:04:05Z07:00": cannot parse "foo" as "2006"`)
+	checkParsingError(t, "?time_slice=foo", `invalid value for query parameter "time_slice": element 0: cannot parse "foo" as RFC3339: parsing time "foo" as "2006-01-02T15:04:05Z07:00": cannot parse "foo" as "2006"`)
+	checkParsingError(t, "?option_time=foo", `invalid value for query parameter "option_time": cannot parse "foo" as RFC3339: parsing time "foo" as "2006-01-02T15:04:05Z07:00": cannot parse "foo" as "2006"`)
 
 	// multiple values: time
 	checkParsingError(t, "?time=2000-01-01&time=2001-01-01", `invalid value for query parameter "time": expected a single value, got 2`)
@@ -305,18 +302,21 @@ func TestOptParserErrors(t *testing.T) {
 	checkParsingError(t, "?option_bool=foo", `invalid value for query parameter "option_bool": strconv.ParseBool: parsing "foo": invalid syntax`)
 	checkParsingError(t, "?bool_slice=foo", `invalid value for query parameter "bool_slice": element 0: strconv.ParseBool: parsing "foo": invalid syntax`)
 
-	// wrong format: time
+	// wrong time format
+	checkParsingError(t, "?time=2000-01-01", `invalid value for query parameter "time": cannot parse "2000-01-01" as RFC3339: parsing time "2000-01-01" as "2006-01-02T15:04:05Z07:00": cannot parse "" as "T"`)
 	r = httptest.NewRequest(http.MethodGet, "/some/unimportant/path?time=2000-01-01%2000:00", http.NoBody)
 	type testImpossibleTimeFormatOpts struct {
 		Time time.Time `q:"time,format:foo"`
 	}
-	_, resultingError = opts.ParseQueryString[testImpossibleTimeFormatOpts](r)
-	th.AssertErr(t, `unsupported time format "foo"; accepted: DateOnly, DateTime, RFC3339, RFC3339Nano, Unix`, resultingError)
-	type testTimeFormatOpts struct {
-		Time time.Time `q:"time,format:RFC3339"`
+	checkParsingPanic(t, `unsupported time format "foo"; accepted: DateOnly, DateTime, RFC3339, RFC3339Nano, Unix`, func() {
+		opts.ParseQueryString[testImpossibleTimeFormatOpts](r.URL.Query()) //nolint:errcheck // won't get to this part
+	})
+	type testMissingTimeFormatOpts struct {
+		Time time.Time `q:"time"`
 	}
-	_, resultingError = opts.ParseQueryString[testTimeFormatOpts](r)
-	th.AssertErr(t, `invalid value for query parameter "time": cannot parse "2000-01-01 00:00" as RFC3339: parsing time "2000-01-01 00:00" as "2006-01-02T15:04:05Z07:00": cannot parse " 00:00" as "T"`, resultingError)
+	checkParsingPanic(t, `time format is missing for field Time`, func() {
+		opts.ParseQueryString[testMissingTimeFormatOpts](r.URL.Query()) //nolint:errcheck // won't get to this part
+	})
 
 	// wrong type: numbers
 	checkParsingError(t, "?int=foo", `invalid value for query parameter "int": strconv.ParseInt: parsing "foo": invalid syntax`)

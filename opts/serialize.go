@@ -9,11 +9,12 @@ import (
 	"reflect"
 	"slices"
 	"strconv"
+	"strings"
 	"time"
 )
 
 // BuildQueryString is a function to be used by request methods with opts structs.
-// It's inspired by gophercloud.BuildQueryString with partially stricter behavior.
+// It's inspired by [gophercloud.BuildQueryString] with partially stricter behavior.
 // It accepts a tagged structure and expands it into a URL struct. Field names are
 // converted into query parameters based on a "q" tag. For example:
 //
@@ -26,31 +27,20 @@ import (
 //	   Baz: "BBB",
 //	}
 //
-// will be converted into "?x_bar=AAA&lorem_ipsum=BBB".
+// will be converted into
+//
+//	?x_bar=AAA&lorem_ipsum=BBB
 //
 // On configuration errors (e.g. non-struct opts, opts with non-q-tagged fields)
 // the function panics. On user errors (e.g. missing required field) an error
 // is returned. On success, url.Values are returned according to the opts.
 //
-// The serialization supports all scalars except complex. Structs of scalars are supported
-// and special structs like time.Time. Additionally, it allows Slices (for multiple
-// values), option.Option (recommended for optional values) and pointers (as alternative
-// to option.Option) of these. Only map[string]string is supported as a map type.
-// Fields left at their type's zero value will be omitted from the query.
+// This function understands and expects the same values for the "q" tag as [BuildQueryString].
+// See documentation over there for details.
 //
-// Slice fields use repeated query parameters:
-// Foo []string `q:"foo"`                       // ?foo=a&foo=b
+// [gophercloud.BuildQueryString]: https://pkg.go.dev/github.com/gophercloud/gophercloud/v2#BuildQueryString
 //
-// Map fields accept plain repeated key:value pairs:
-// Bar map[string]string `q:"bar"`              // ?bar=k1:v1&bar=k2:v2
-//
-// time.Time fields support the formats RFC3339Nano, RFC3339, DateTime, Date, Unix.
-// A single `format` option can be set, to define what is used for serialization, otherwise
-// the default RFC3339 gets used:
-// Baz time.Time `q:"baz,format:DateTime"`       // ?baz=1999-01-01 00:00:00
-//
-// A `required` option can be set to define that a missing value will produce an error.
-// Quux string `q:"quux,required"`               // ?foo=bar --> error
+// [option.Option]: https://pkg.go.dev/go.xyrillian.de/gg/option#Option
 func BuildQueryString(opts any) (url.Values, error) {
 	optsValue := reflect.ValueOf(opts)
 	if optsValue.Kind() == reflect.Ptr { //nolint: govet // won't inline this...
@@ -65,10 +55,21 @@ func BuildQueryString(opts any) (url.Values, error) {
 	for _, field := range reflect.VisibleFields(optsType) {
 		fieldValue := optsValue.FieldByIndex(field.Index)
 		qTag := field.Tag.Get("q")
+		if field.Anonymous {
+			// this is for struct embedding to work
+			if qTag != "" {
+				panic(fmt.Sprintf(`expected embedded struct %q to have no "q:"-tag`, field.Name))
+			}
+			continue
+		}
 		if qTag == "" {
 			panic(fmt.Sprintf(`expected %q to have a "q:"-tag`, field.Name))
 		}
-		key, format, required := parseQTag(qTag)
+		key, timeFormat, required := parseQTag(qTag)
+		// all known formats are currently timeFormats
+		if _, ok := TimeFormats[timeFormat]; timeFormat != "" && timeFormat != UnixFormat && !ok {
+			panic(fmt.Sprintf("unsupported time format %q; accepted: %s", timeFormat, supportedHumanReadableFormats))
+		}
 
 		// if field not set, skip
 		if isZero(fieldValue) {
@@ -94,35 +95,34 @@ func BuildQueryString(opts any) (url.Values, error) {
 		case reflect.Float32, reflect.Float64:
 			params.Add(key, strconv.FormatFloat(fieldValue.Float(), 'g', -1, fieldValue.Type().Bits()))
 		case reflect.Slice:
-			var values []string
+			values := make([]string, fieldValue.Len())
 			for i := range fieldValue.Len() {
-				values = append(values, serializeValue(fieldValue.Index(i), format))
+				values[i] = serializeValue(fieldValue.Index(i), timeFormat)
 			}
 			params[key] = append(params[key], values...)
 		case reflect.Struct:
 			if fieldValue.Type() == reflect.TypeFor[time.Time]() {
-				params.Add(key, serializeValue(fieldValue, format))
+				if timeFormat == "" {
+					panic("time format is missing")
+				}
+				params.Add(key, serializeValue(fieldValue, timeFormat))
 			} else if m := fieldValue.MethodByName("AsPointer"); m.IsValid() {
 				// Option[T] — unwrap via AsPointer
 				results := m.Call(nil)
 				if len(results) == 1 && results[0].Kind() == reflect.Ptr && !results[0].IsNil() { //nolint:govet // won't inline this...
-					params.Add(key, serializeValue(results[0].Elem(), format))
+					params.Add(key, serializeValue(results[0].Elem(), timeFormat))
 				}
 			} else {
 				// defense in depth: already handled by isZero function
 				panic("for structs only time.Time and implementers of isZeroer are supported")
 			}
 		case reflect.Map:
-			if fieldValue.Type().Key().Kind() == reflect.String && fieldValue.Type().Elem().Kind() == reflect.String {
-				keys := make([]string, 0, fieldValue.Len())
-				for _, k := range fieldValue.MapKeys() {
-					keys = append(keys, k.String())
-				}
-				slices.Sort(keys)
-				for _, k := range keys {
-					value := fieldValue.MapIndex(reflect.ValueOf(k)).String()
-					params.Add(key, k+":"+value)
-				}
+			keys := fieldValue.MapKeys()
+			slices.SortFunc(keys, func(a, b reflect.Value) int {
+				return strings.Compare(serializeValue(a, ""), serializeValue(b, ""))
+			})
+			for _, k := range keys {
+				params.Add(key, serializeValue(k, "")+":"+serializeValue(fieldValue.MapIndex(k), ""))
 			}
 		}
 	}
@@ -130,7 +130,7 @@ func BuildQueryString(opts any) (url.Values, error) {
 }
 
 // serializeValue converts a reflect.Value to its string representation for query parameters.
-func serializeValue(v reflect.Value, format string) string {
+func serializeValue(v reflect.Value, timeFormat string) string {
 	// Dereference pointers.
 	for v.Kind() == reflect.Ptr { //nolint:govet // won't inline this...
 		v = v.Elem()
@@ -149,15 +149,14 @@ func serializeValue(v reflect.Value, format string) string {
 	case reflect.Struct:
 		if v.Type() == reflect.TypeFor[time.Time]() {
 			t := v.Interface().(time.Time)
-			switch format {
-			case "":
-				return t.Format(time.RFC3339)
-			case unixFormat:
+			switch timeFormat {
+			case UnixFormat:
 				return strconv.FormatInt(t.Unix(), 10)
 			default:
-				tf, exists := timeFormats[format]
+				tf, exists := TimeFormats[timeFormat]
+				// defense in depth: should be checked outside of this function (when no value is set)
 				if !exists {
-					panic("unknown time format " + format)
+					panic("unknown time format " + timeFormat)
 				}
 				return t.Format(tf)
 			}
@@ -166,7 +165,7 @@ func serializeValue(v reflect.Value, format string) string {
 		if m := v.MethodByName("AsPointer"); m.IsValid() {
 			results := m.Call(nil)
 			if len(results) == 1 && results[0].Kind() == reflect.Ptr && !results[0].IsNil() { //nolint:govet // won't inline this...
-				return serializeValue(results[0].Elem(), format)
+				return serializeValue(results[0].Elem(), timeFormat)
 			}
 		}
 	}
