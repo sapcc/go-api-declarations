@@ -4,24 +4,27 @@
 package opts
 
 import (
+	"fmt"
 	"maps"
 	"reflect"
 	"slices"
 	"strings"
 	"time"
+
+	. "go.xyrillian.de/gg/option"
 )
 
 var (
-	// TimeFormats lists all allowed formats supported by the time package, except "Unix" (see below).
-	TimeFormats = map[string]string{
+	// timeFormats lists all allowed formats supported by the time package, except "Unix" (see below).
+	nonUnixTimeFormats = map[string]string{
 		"RFC3339Nano": time.RFC3339Nano,
 		"RFC3339":     time.RFC3339,
 		"DateTime":    time.DateTime,
 		"DateOnly":    time.DateOnly,
 	}
-	// UnixFormat is an identifier for the time to be interpreted as unix-seconds since epoch.
-	UnixFormat                    = "Unix"
-	supportedHumanReadableFormats = strings.Join(slices.Sorted(maps.Keys(TimeFormats)), ", ") + ", " + UnixFormat
+	// unixFormat is an identifier for the time to be interpreted as unix-seconds since epoch.
+	unixTimeFormat                = "Unix"
+	supportedHumanReadableFormats = strings.Join(slices.Sorted(slices.Values(append(slices.Collect(maps.Keys(nonUnixTimeFormats)), unixTimeFormat))), ", ")
 )
 
 // parseQTag parses a q struct tag value into its key name, optional format, and required flag.
@@ -32,62 +35,52 @@ var (
 //	`q:"updated_at,format:Unix"`          → key="updated_at", format="Unix", required=false
 //	`q:"updated_at,required"`             → key="updated_at", format="", required=true
 //	`q:"updated_at,format:Unix,required"` → key="updated_at", format="Unix", required=true
-func parseQTag(tag string) (key, format string, required bool) {
+func parseQTag(tag string) (key string, format Option[string], required bool) {
 	parts := strings.SplitN(tag, ",", 2)
 	key = parts[0]
 	if len(parts) > 1 {
 		for opt := range strings.SplitSeq(parts[1], ",") {
 			if after, found := strings.CutPrefix(opt, "format:"); found {
-				format = after
+				// all known formats are currently for time
+				if _, ok := nonUnixTimeFormats[after]; after != unixTimeFormat && !ok {
+					panic(fmt.Sprintf("unsupported time format %q; accepted: %s", after, supportedHumanReadableFormats))
+				}
+				format = Some(after)
 			} else if opt == "required" {
 				required = true
+			} else {
+				panic("unrecognized option on tag " + tag)
 			}
 		}
 	}
 	return key, format, required
 }
 
-// isZero checks if a value is the zero value for its type. For scalar values,
-// it uses reflect. Only certain structs are allowed: Ones that implement the
-// isZeroer interface and time.Time. For arrays it checks each element. For
-// pointer, funcs, maps and slices reflect.IsNil can be used.
-func isZero(v reflect.Value) bool {
-	// Check for types implementing IsZero() bool (e.g. Option[T], time.Time).
-	// Guard against nil pointers whose element type has pointer-receiver IsZero.
-	type isZeroer interface{ IsZero() bool }
-	if v.Kind() == reflect.Ptr { //nolint:govet // won't inline this...
-		if v.IsNil() {
-			return true
-		}
-		// Dereference the pointer and check the element.
-		return isZero(v.Elem())
+// typeNeedsTimeFormat reports whether t contains time.Time at any level
+// of indirection (pointer, slice element, map value, or Option inner type).
+func typeNeedsTimeFormat(t reflect.Type) bool {
+	if slices.Contains([]reflect.Kind{reflect.Pointer, reflect.Slice, reflect.Array, reflect.Map}, t.Kind()) {
+		return typeNeedsTimeFormat(t.Elem())
 	}
-	if v.CanInterface() {
-		if z, ok := v.Interface().(isZeroer); ok {
-			return z.IsZero()
-		}
+	if t == reflect.TypeFor[time.Time]() {
+		return true
 	}
-
-	switch v.Kind() {
-	case reflect.Func, reflect.Map, reflect.Slice:
-		return v.IsNil()
-	case reflect.Array:
-		z := true
-		for i := range v.Len() {
-			z = z && isZero(v.Index(i))
+	// Option[T]: detected by IsSome method, inner type via UnmarshalYAML contract
+	if _, isOption := t.MethodByName("IsSome"); isOption {
+		var innerType reflect.Type
+		probe := func(dest any) error {
+			// dest is **T → Elem() is *T → Elem() is T
+			innerType = reflect.TypeOf(dest).Elem().Elem()
+			return nil
 		}
-		return z
-	case reflect.Struct:
-		if v.Type() != reflect.TypeFor[time.Time]() {
-			panic("for structs only time.Time and implementers of isZeroer are supported")
+		type yamlUnmarshaler interface {
+			UnmarshalYAML(func(any) error) error
 		}
-		z := true
-		for _, structField := range v.Fields() {
-			z = z && isZero(structField)
+		err := reflect.New(t).Interface().(yamlUnmarshaler).UnmarshalYAML(probe)
+		if err != nil {
+			panic(fmt.Sprintf("failed to probe inner type of Option: %v", err))
 		}
-		return z
-	default:
-		z := reflect.Zero(v.Type())
-		return v.Interface() == z.Interface()
+		return typeNeedsTimeFormat(innerType)
 	}
+	return false
 }

@@ -199,7 +199,7 @@ func TestBuildQueryStringErrors(t *testing.T) {
 	type testNested2 struct {
 		Nested testNested `q:"nested"`
 	}
-	checkSerializingPanic(t, "for structs only time.Time and implementers of isZeroer are supported", func() {
+	checkSerializingPanic(t, "for structs only implementers of isZeroer are supported", func() {
 		opts.BuildQueryString(testNested2{}) //nolint:errcheck // won't get to this part
 	})
 
@@ -208,7 +208,13 @@ func TestBuildQueryStringErrors(t *testing.T) {
 		Time time.Time `q:"time,format:foo"`
 	}
 	checkSerializingPanic(t, `unsupported time format "foo"; accepted: DateOnly, DateTime, RFC3339, RFC3339Nano, Unix`, func() {
-		opts.BuildQueryString(testBadTimeFormatOpts{Time: time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC)}) //nolint:errcheck // won't get to this part
+		opts.BuildQueryString(testBadTimeFormatOpts{}) //nolint:errcheck // won't get to this part
+	})
+	type testMissingTimeFormatOpts struct {
+		Time time.Time `q:"time"`
+	}
+	checkParsingPanic(t, `time format is missing for field "Time"`, func() {
+		opts.BuildQueryString(testMissingTimeFormatOpts{}) //nolint:errcheck // won't get to this part
 	})
 
 	//  missing required parameter

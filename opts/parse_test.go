@@ -314,7 +314,7 @@ func TestOptParserErrors(t *testing.T) {
 	type testMissingTimeFormatOpts struct {
 		Time time.Time `q:"time"`
 	}
-	checkParsingPanic(t, `time format is missing for field Time`, func() {
+	checkParsingPanic(t, `time format is missing for field "Time"`, func() {
 		opts.ParseQueryString[testMissingTimeFormatOpts](r.URL.Query()) //nolint:errcheck // won't get to this part
 	})
 

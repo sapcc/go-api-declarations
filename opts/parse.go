@@ -11,6 +11,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	. "go.xyrillian.de/gg/option"
 )
 
 // ParseQueryString parses the query parameters of url.Values into an opt struct.
@@ -52,8 +54,8 @@ import (
 //
 //	Bar map[string]string `q:"bar"`              // ?bar=k1:v1&bar=k2:v2
 //
-// [time.Time] fields support the formats defined under [opts.TimeFormats].
-// A single "format" option must be set, to limit what the parser accepts:
+// [time.Time] fields support the formats RFC3339Nano, RFC3339, DateTime, Date, Unix
+// (seconds since epoch). A single "format" option must be set, to limit what the parser accepts:
 //
 //	Baz time.Time `q:"baz,format:RFC3339"`       // ?baz=1999-01-01T00:00:00
 //
@@ -74,7 +76,7 @@ func ParseQueryString[T any](query url.Values) (T, error) {
 	type optMeta struct {
 		structField       reflect.StructField
 		fieldValue        reflect.Value
-		timeFormat        string // "" or time-formats
+		maybeTimeFormat   Option[string]
 		requiredAndUnseen bool
 	}
 	knownOpts := make(map[string]optMeta, optsType.NumField())
@@ -91,18 +93,20 @@ func ParseQueryString[T any](query url.Values) (T, error) {
 		if qTag == "" {
 			panic(fmt.Sprintf(`expected %q to have a "q:"-tag`, field.Name))
 		}
-		optKey, timeFormat, required := parseQTag(qTag)
+		optKey, maybeTimeFormat, required := parseQTag(qTag)
 		if !fieldValue.CanSet() {
 			panic(fmt.Sprintf(`field %q is unexported and therefore cannot be set`, optKey))
 		}
-		// all known formats are currently timeFormats
-		if _, ok := TimeFormats[timeFormat]; timeFormat != "" && timeFormat != UnixFormat && !ok {
-			panic(fmt.Sprintf("unsupported time format %q; accepted: %s", timeFormat, supportedHumanReadableFormats))
+
+		// check if format is set when required
+		if typeNeedsTimeFormat(fieldValue.Type()) && maybeTimeFormat.IsNone() {
+			panic(fmt.Sprintf(`time format is missing for field %q`, field.Name))
 		}
+
 		knownOpts[optKey] = optMeta{
 			structField:       field,
 			fieldValue:        fieldValue,
-			timeFormat:        timeFormat,
+			maybeTimeFormat:   maybeTimeFormat,
 			requiredAndUnseen: required,
 		}
 	}
@@ -114,11 +118,11 @@ func ParseQueryString[T any](query url.Values) (T, error) {
 			return opts, fmt.Errorf("unknown query parameter %q", optKey)
 		}
 		// now, just set the value of the field accordingly
-		err := setField(meta.structField, meta.fieldValue, rawValues, meta.timeFormat)
+		err := setField(meta.structField, meta.fieldValue, rawValues, meta.maybeTimeFormat)
 		if err != nil {
 			return opts, fmt.Errorf("invalid value for query parameter %q: %w", optKey, err)
 		}
-		if !isZero(meta.fieldValue) && meta.requiredAndUnseen {
+		if !isOnlyEmptyStrings(rawValues) && meta.requiredAndUnseen {
 			meta.requiredAndUnseen = false
 			knownOpts[optKey] = meta
 		}
@@ -133,9 +137,19 @@ func ParseQueryString[T any](query url.Values) (T, error) {
 	return opts, nil
 }
 
+// isOnlyEmptyStrings checks if all rawValues are only emptyStrings.
+func isOnlyEmptyStrings(rawvalues []string) bool {
+	for _, rawvalue := range rawvalues {
+		if rawvalue != "" {
+			return false
+		}
+	}
+	return true
+}
+
 // setField writes values into a single struct field.
 // The timeFormat parameter carries the format option from the q tag (may be empty).
-func setField(f reflect.StructField, fv reflect.Value, values []string, timeFormat string) error {
+func setField(f reflect.StructField, fv reflect.Value, values []string, timeFormat Option[string]) error {
 	if len(values) == 0 {
 		return nil
 	}
@@ -152,17 +166,12 @@ func setField(f reflect.StructField, fv reflect.Value, values []string, timeForm
 	// We parse into a temporary value of the inner type by recursing into setField,
 	// then use UnmarshalYAML to set the Option value directly.
 	if _, isOption := fv.Type().MethodByName("IsSome"); isOption {
-		tmp := reflect.New(fv.Type().Field(0).Type).Elem()
-		if err := setField(f, tmp, values, timeFormat); err != nil {
-			return err
-		}
 		unmarshal := func(dest any) error {
-			// dest is **T (pointer to the *T that UnmarshalYAML allocated).
-			// We need to set *dest to point to our parsed tmp value.
-			ptr := reflect.New(tmp.Type())
-			ptr.Elem().Set(tmp)
-			reflect.ValueOf(dest).Elem().Set(ptr)
-			return nil
+			// dest is **T; allocate *T and parse into T directly
+			destVal := reflect.ValueOf(dest).Elem()         // *T
+			destVal.Set(reflect.New(destVal.Type().Elem())) // allocate T, set *T
+			inner := destVal.Elem()                         // T (the actual value to fill)
+			return setField(f, inner, values, timeFormat)
 		}
 		type yamlUnmarshaler interface {
 			UnmarshalYAML(func(any) error) error
@@ -183,9 +192,6 @@ func setField(f reflect.StructField, fv reflect.Value, values []string, timeForm
 
 	// handle time.Time fields
 	if fv.Type() == reflect.TypeFor[time.Time]() {
-		if timeFormat == "" {
-			panic("time format is missing for field " + f.Name)
-		}
 		t, err := parseTime(values[0], timeFormat)
 		if err != nil {
 			return err
@@ -301,20 +307,21 @@ func parseMapValues(values []string, keyType, valType reflect.Type) (reflect.Val
 	return m, nil
 }
 
-// parseTime parses a time string. Accepted formats are defined in opts.TimeFormats.
-func parseTime(s, timeFormat string) (time.Time, error) {
-	if timeFormat == UnixFormat {
+// parseTime parses a time string. Accepted non-unix formats are defined in opts.nonUnixTimeFormats.
+func parseTime(s string, timeFormat Option[string]) (time.Time, error) {
+	tf := timeFormat.UnwrapOrPanic("timeFormat should have been set")
+	if tf == unixTimeFormat {
 		n, err := strconv.ParseInt(s, 10, 64)
 		if err != nil {
-			return time.Time{}, fmt.Errorf("cannot parse %q as %s seconds: %w", s, UnixFormat, err)
+			return time.Time{}, fmt.Errorf("cannot parse %q as %s seconds: %w", s, unixTimeFormat, err)
 		}
 		return time.Unix(n, 0).UTC(), nil
 	}
 	// we checked this already when building knownOpts
-	layout := TimeFormats[timeFormat]
+	layout := nonUnixTimeFormats[tf]
 	t, err := time.Parse(layout, s)
 	if err != nil {
-		return time.Time{}, fmt.Errorf("cannot parse %q as %s: %w", s, timeFormat, err)
+		return time.Time{}, fmt.Errorf("cannot parse %q as %s: %w", s, tf, err)
 	}
 	return t, nil
 }

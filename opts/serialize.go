@@ -11,6 +11,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	. "go.xyrillian.de/gg/option"
 )
 
 // BuildQueryString is a function to be used by request methods with opts structs.
@@ -65,18 +67,15 @@ func BuildQueryString(opts any) (url.Values, error) {
 		if qTag == "" {
 			panic(fmt.Sprintf(`expected %q to have a "q:"-tag`, field.Name))
 		}
-		key, timeFormat, required := parseQTag(qTag)
-		// all known formats are currently timeFormats
-		if _, ok := TimeFormats[timeFormat]; timeFormat != "" && timeFormat != UnixFormat && !ok {
-			panic(fmt.Sprintf("unsupported time format %q; accepted: %s", timeFormat, supportedHumanReadableFormats))
+		key, maybeTimeFormat, required := parseQTag(qTag)
+
+		// check if format is set when required
+		if typeNeedsTimeFormat(fieldValue.Type()) && maybeTimeFormat.IsNone() {
+			panic(fmt.Sprintf(`time format is missing for field %q`, field.Name))
 		}
 
 		// if field not set, skip
-		if isZero(fieldValue) {
-			if required {
-				// if the field is required, it can't have a zero-value
-				return url.Values{}, fmt.Errorf("required query parameter [%s] not set", field.Name)
-			}
+		if canBeSkipped(fieldValue, required) {
 			continue
 		}
 	loop:
@@ -84,53 +83,48 @@ func BuildQueryString(opts any) (url.Values, error) {
 		case reflect.Ptr: //nolint: govet // won't inline this...
 			fieldValue = fieldValue.Elem()
 			goto loop
-		case reflect.String:
-			params.Add(key, fieldValue.String())
-		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-			params.Add(key, strconv.FormatInt(fieldValue.Int(), 10))
-		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-			params.Add(key, strconv.FormatUint(fieldValue.Uint(), 10))
-		case reflect.Bool:
-			params.Add(key, strconv.FormatBool(fieldValue.Bool()))
-		case reflect.Float32, reflect.Float64:
-			params.Add(key, strconv.FormatFloat(fieldValue.Float(), 'g', -1, fieldValue.Type().Bits()))
+		// only handle non-single-values here, rest is done by serializeSingleValue()
 		case reflect.Slice:
 			values := make([]string, fieldValue.Len())
 			for i := range fieldValue.Len() {
-				values[i] = serializeValue(fieldValue.Index(i), timeFormat)
+				values[i] = serializeSingleValue(fieldValue.Index(i), maybeTimeFormat)
 			}
 			params[key] = append(params[key], values...)
 		case reflect.Struct:
 			if fieldValue.Type() == reflect.TypeFor[time.Time]() {
-				if timeFormat == "" {
-					panic("time format is missing")
-				}
-				params.Add(key, serializeValue(fieldValue, timeFormat))
+				params.Add(key, serializeSingleValue(fieldValue, maybeTimeFormat))
 			} else if m := fieldValue.MethodByName("AsPointer"); m.IsValid() {
 				// Option[T] — unwrap via AsPointer
 				results := m.Call(nil)
 				if len(results) == 1 && results[0].Kind() == reflect.Ptr && !results[0].IsNil() { //nolint:govet // won't inline this...
-					params.Add(key, serializeValue(results[0].Elem(), timeFormat))
+					params.Add(key, serializeSingleValue(results[0].Elem(), maybeTimeFormat))
 				}
 			} else {
-				// defense in depth: already handled by isZero function
-				panic("for structs only time.Time and implementers of isZeroer are supported")
+				// defense in depth: already handled by canBeSkipped function
+				panic("for structs only implementers of isZeroer are supported")
 			}
 		case reflect.Map:
 			keys := fieldValue.MapKeys()
 			slices.SortFunc(keys, func(a, b reflect.Value) int {
-				return strings.Compare(serializeValue(a, ""), serializeValue(b, ""))
+				return strings.Compare(serializeSingleValue(a, maybeTimeFormat), serializeSingleValue(b, maybeTimeFormat))
 			})
 			for _, k := range keys {
-				params.Add(key, serializeValue(k, "")+":"+serializeValue(fieldValue.MapIndex(k), ""))
+				params.Add(key, serializeSingleValue(k, maybeTimeFormat)+":"+serializeSingleValue(fieldValue.MapIndex(k), maybeTimeFormat))
 			}
+		default:
+			params.Add(key, serializeSingleValue(fieldValue, maybeTimeFormat))
+		}
+		if required && isOnlyEmptyStrings(params[key]) {
+			// if the field is required, it cannot have no value (handles nil maps, slices, arrays)
+			return url.Values{}, fmt.Errorf("required query parameter [%s] not set", field.Name)
 		}
 	}
 	return params, nil
 }
 
-// serializeValue converts a reflect.Value to its string representation for query parameters.
-func serializeValue(v reflect.Value, timeFormat string) string {
+// serializeSingleValue converts a reflect.Value to its string representation for query parameters.
+// Zero values are skipped.
+func serializeSingleValue(v reflect.Value, timeFormat Option[string]) string {
 	// Dereference pointers.
 	for v.Kind() == reflect.Ptr { //nolint:govet // won't inline this...
 		v = v.Elem()
@@ -147,27 +141,62 @@ func serializeValue(v reflect.Value, timeFormat string) string {
 	case reflect.Float32, reflect.Float64:
 		return strconv.FormatFloat(v.Float(), 'g', -1, v.Type().Bits())
 	case reflect.Struct:
+		// handle time
 		if v.Type() == reflect.TypeFor[time.Time]() {
 			t := v.Interface().(time.Time)
-			switch timeFormat {
-			case UnixFormat:
+			tf := timeFormat.UnwrapOrPanic("timeFormat should have been set")
+			switch tf {
+			case unixTimeFormat:
 				return strconv.FormatInt(t.Unix(), 10)
 			default:
-				tf, exists := TimeFormats[timeFormat]
-				// defense in depth: should be checked outside of this function (when no value is set)
-				if !exists {
-					panic("unknown time format " + timeFormat)
-				}
-				return t.Format(tf)
+				layout := nonUnixTimeFormats[tf]
+				return t.Format(layout)
 			}
 		}
-		// For Option[T] and similar wrapper types: try to unwrap via AsPointer() method.
+		// handle Option[T]: try to unwrap via AsPointer() method.
 		if m := v.MethodByName("AsPointer"); m.IsValid() {
 			results := m.Call(nil)
 			if len(results) == 1 && results[0].Kind() == reflect.Ptr && !results[0].IsNil() { //nolint:govet // won't inline this...
-				return serializeValue(results[0].Elem(), timeFormat)
+				return serializeSingleValue(results[0].Elem(), timeFormat)
 			}
 		}
 	}
 	return fmt.Sprintf("%v", v.Interface())
+}
+
+// canBeSkipped checks if a value can be skipped for serialization into a query string.
+// Required params are never skipped. Otherwise, isZero() of the value is checked.
+// Special handling is applied to
+// - structs (check isZero() interface)
+// - slices, arrays, maps (considered zero when nil or all values are zero)
+func canBeSkipped(v reflect.Value, required bool) bool {
+	if required {
+		return false
+	}
+	// check pointers
+	if v.Kind() == reflect.Ptr { //nolint:govet // won't inline this...
+		if v.IsNil() {
+			// Guard against nil pointers whose element type has pointer-receiver IsZero.
+			return true
+		}
+		// Dereference the pointer and check the element.
+		return canBeSkipped(v.Elem(), false)
+	}
+
+	// check for types implementing IsZero() bool (e.g. Option[T], time.Time).
+	if v.CanInterface() {
+		type isZeroer interface{ IsZero() bool }
+		if z, ok := v.Interface().(isZeroer); ok {
+			return z.IsZero()
+		}
+	}
+
+	switch v.Kind() {
+	case reflect.Func:
+		panic("functions are not supported")
+	case reflect.Struct:
+		panic("for structs only implementers of isZeroer are supported")
+	default:
+		return v.IsZero()
+	}
 }
