@@ -26,13 +26,13 @@ import (
 //
 // and a request with the query string
 //
-//	?x_bar=AAA&lorem_ipsum=BBB
+//	?x_bar=AAA&lorem_ipsum=1
 //
 // will produce
 //
 //	result := Something{
 //	   Bar: "AAA",
-//	   Baz: "BBB",
+//	   Baz: 1,
 //	}
 //
 // On configuration errors (e.g. non-struct opts, opts with non-q-tagged fields)
@@ -42,8 +42,9 @@ import (
 //
 // The parser supports all scalars except complex. Additionally, it allows Slices
 // (for multiple values), [option.Option] (recommended for optional values) and
-// pointers (as alternative to [option.Option]) of these. Only map[string]string
-// is supported as a map type. Embedded structs and [time.Time] are supported.
+// pointers (as alternative to [option.Option]) of these. Maps are supported when
+// the key and value types are supported. Only selected structs work
+// (embedded structs and [time.Time]).
 // Some inputs might work but are untested.
 //
 // Slice fields use repeated query parameters:
@@ -54,7 +55,7 @@ import (
 //
 //	Bar map[string]string `q:"bar"`              // ?bar=k1:v1&bar=k2:v2
 //
-// [time.Time] fields support the formats RFC3339Nano, RFC3339, DateTime, Date, Unix
+// [time.Time] fields support the formats RFC3339Nano, RFC3339, DateTime, DateOnly, Unix
 // (seconds since epoch). A single "format" option must be set, to limit what the parser accepts:
 //
 //	Baz time.Time `q:"baz,format:RFC3339"`       // ?baz=1999-01-01T00:00:00
@@ -236,7 +237,7 @@ func setField(f reflect.StructField, fv reflect.Value, values []string, timeForm
 		}
 	// set maps
 	case reflect.Map:
-		m, err := parseMapValues(values, fv.Type().Key(), fv.Type().Elem())
+		m, err := parseMapValues(values, fv.Type())
 		if err != nil {
 			return err
 		}
@@ -284,21 +285,21 @@ func parseScalar(s string, t reflect.Type) (reflect.Value, error) {
 	return v, nil
 }
 
-// parseMapValues parses a list of raw string values into a map with the given key and value types.
+// parseMapValues parses a list of raw string values into a map with the given type.
 // Each value must be in "key:value" notation (e.g. ?m=k1:v1&m=k2:v2).
-func parseMapValues(values []string, keyType, valType reflect.Type) (reflect.Value, error) {
-	m := reflect.MakeMap(reflect.MapOf(keyType, valType))
+func parseMapValues(values []string, mapType reflect.Type) (reflect.Value, error) {
+	m := reflect.MakeMapWithSize(mapType, len(values))
 	for _, raw := range values {
 		raw = strings.TrimSpace(raw)
 		kv := strings.SplitN(raw, ":", 2)
 		if len(kv) != 2 {
 			return reflect.Value{}, fmt.Errorf("invalid map entry %q: expected key:value", raw)
 		}
-		key, err := parseScalar(kv[0], keyType)
+		key, err := parseScalar(kv[0], mapType.Key())
 		if err != nil {
 			return reflect.Value{}, fmt.Errorf("invalid map key %q: %w", kv[0], err)
 		}
-		val, err := parseScalar(kv[1], valType)
+		val, err := parseScalar(kv[1], mapType.Elem())
 		if err != nil {
 			return reflect.Value{}, fmt.Errorf("invalid map value %q: %w", kv[1], err)
 		}

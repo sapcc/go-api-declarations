@@ -26,26 +26,27 @@ import (
 //	}
 //	instance := Something{
 //	   Bar: "AAA",
-//	   Baz: "BBB",
+//	   Baz: 1,
 //	}
 //
 // will be converted into
 //
-//	?x_bar=AAA&lorem_ipsum=BBB
+//	?x_bar=AAA&lorem_ipsum=1
 //
 // On configuration errors (e.g. non-struct opts, opts with non-q-tagged fields)
 // the function panics. On user errors (e.g. missing required field) an error
 // is returned. On success, url.Values are returned according to the opts.
 //
-// This function understands and expects the same values for the "q" tag as [BuildQueryString].
+// This function understands and expects the same values for the "q" tag as [opts.ParseQueryString].
 // See documentation over there for details.
 //
 // [gophercloud.BuildQueryString]: https://pkg.go.dev/github.com/gophercloud/gophercloud/v2#BuildQueryString
-//
-// [option.Option]: https://pkg.go.dev/go.xyrillian.de/gg/option#Option
 func BuildQueryString(opts any) (url.Values, error) {
 	optsValue := reflect.ValueOf(opts)
 	if optsValue.Kind() == reflect.Ptr { //nolint: govet // won't inline this...
+		if optsValue.IsNil() {
+			panic("opts is a nil pointer")
+		}
 		optsValue = optsValue.Elem()
 	}
 	optsType := optsValue.Type()

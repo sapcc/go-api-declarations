@@ -171,6 +171,11 @@ func checkSerializingPanic(t *testing.T, panicMsg string, fn func()) {
 }
 
 func TestBuildQueryStringErrors(t *testing.T) {
+	// nil-pointer input (panics)
+	checkSerializingPanic(t, "opts is a nil pointer", func() {
+		opts.BuildQueryString((*testOpts)(nil)) //nolint:errcheck // won't get to this part
+	})
+
 	// non-struct input (panics)
 	checkSerializingPanic(t, "options type is not a struct", func() {
 		opts.BuildQueryString(42) //nolint:errcheck // won't get to this part
@@ -213,7 +218,7 @@ func TestBuildQueryStringErrors(t *testing.T) {
 	type testMissingTimeFormatOpts struct {
 		Time time.Time `q:"time"`
 	}
-	checkParsingPanic(t, `time format is missing for field "Time"`, func() {
+	checkSerializingPanic(t, `time format is missing for field "Time"`, func() {
 		opts.BuildQueryString(testMissingTimeFormatOpts{}) //nolint:errcheck // won't get to this part
 	})
 

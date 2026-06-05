@@ -59,7 +59,10 @@ func parseQTag(tag string) (key string, format Option[string], required bool) {
 // typeNeedsTimeFormat reports whether t contains time.Time at any level
 // of indirection (pointer, slice element, map value, or Option inner type).
 func typeNeedsTimeFormat(t reflect.Type) bool {
-	if slices.Contains([]reflect.Kind{reflect.Pointer, reflect.Slice, reflect.Array, reflect.Map}, t.Kind()) {
+	if t.Kind() == reflect.Map {
+		return typeNeedsTimeFormat(t.Key()) || typeNeedsTimeFormat(t.Elem())
+	}
+	if slices.Contains([]reflect.Kind{reflect.Pointer, reflect.Slice, reflect.Array}, t.Kind()) {
 		return typeNeedsTimeFormat(t.Elem())
 	}
 	if t == reflect.TypeFor[time.Time]() {
