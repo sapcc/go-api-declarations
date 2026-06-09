@@ -113,7 +113,7 @@ func ParseQueryString[T any](query url.Values) (T, error) {
 		}
 		optKey, maybeTimeFormat, maybeValue, required := parseQTag(qTag)
 		if !fieldValue.CanSet() {
-			panic(fmt.Sprintf(`field %q is unexported and therefore cannot be set`, optKey))
+			panic(fmt.Sprintf(`field %q is unexported and therefore cannot be set`, field.Name))
 		}
 
 		// value-discriminant fields go into a separate structure
@@ -141,6 +141,13 @@ func ParseQueryString[T any](query url.Values) (T, error) {
 			fieldValue:        fieldValue,
 			maybeTimeFormat:   maybeTimeFormat,
 			requiredAndUnseen: required,
+		}
+	}
+
+	// keys may not be used for both regular fields and value-discriminant fields
+	for optKey := range valueFields {
+		if _, exists := knownOpts[optKey]; exists {
+			panic(fmt.Sprintf(`key %q cannot be declared as both a regular field and a value-discriminant field`, optKey))
 		}
 	}
 

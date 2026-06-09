@@ -202,6 +202,26 @@ func TestBuildQueryStringErrors(t *testing.T) {
 		opts.BuildQueryString(testEmbeddedQTagOpts{}) //nolint:errcheck // won't get to this part
 	})
 
+	// contradictory field declarations
+	type testFieldNameCollisionOpts struct {
+		Scope   string   `q:"scope"`
+		With    []string `q:"with"`
+		WithFoo bool     `q:"with,value:foo"`
+		WithBar bool     `q:"with,value:bar"`
+	}
+	checkParsingPanic(t, `key "with" cannot be declared as both a regular field and a value-discriminant field`, func() {
+		opts.BuildQueryString(testFieldNameCollisionOpts{}) //nolint:errcheck // won't get to this part
+	})
+	type testFieldNameCollisionOptsFlipped struct {
+		Scope   string   `q:"scope"`
+		WithFoo bool     `q:"with,value:foo"`
+		WithBar bool     `q:"with,value:bar"`
+		With    []string `q:"with"`
+	}
+	checkParsingPanic(t, `key "with" cannot be declared as both a regular field and a value-discriminant field`, func() {
+		opts.BuildQueryString(testFieldNameCollisionOptsFlipped{}) //nolint:errcheck // won't get to this part
+	})
+
 	// unknown struct parameter (panics)
 	type testNested struct {
 		String string `q:"string"`

@@ -229,13 +229,16 @@ func TestOptParserHappyPaths(t *testing.T) {
 func checkParsingPanic(t *testing.T, panicMsg string, fn func()) {
 	t.Helper()
 	defer func() {
+		t.Helper()
 		r := recover()
 		if r == nil {
 			t.Errorf("expected panic %q, but function did not panic", panicMsg)
+			return
 		}
 		got, ok := r.(string)
 		if !ok {
 			t.Errorf("expected panic with string %q, but got non-string panic: %v", panicMsg, r)
+			return
 		}
 		if got != panicMsg {
 			t.Errorf("expected panic: %s, but got: %s", panicMsg, got)
@@ -273,6 +276,17 @@ func TestOptParserErrors(t *testing.T) {
 	}
 	checkParsingPanic(t, `expected embedded struct "EmbeddedOpts" to have no "q:"-tag`, func() {
 		opts.ParseQueryString[testEmbeddedQTagOpts](r.URL.Query()) //nolint:errcheck // won't get to this part
+	})
+
+	// contradictory field declarations
+	type testFieldNameCollisionOpts struct {
+		Scope   string   `q:"scope"`
+		With    []string `q:"with"`
+		WithFoo bool     `q:"with,value:foo"`
+		WithBar bool     `q:"with,value:bar"`
+	}
+	checkParsingPanic(t, `key "with" cannot be declared as both a regular field and a value-discriminant field`, func() {
+		opts.ParseQueryString[testFieldNameCollisionOpts](r.URL.Query()) //nolint:errcheck // won't get to this part
 	})
 
 	// missing required parameter

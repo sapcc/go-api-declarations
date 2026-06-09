@@ -61,6 +61,7 @@ func BuildQueryString(opts any) (url.Values, error) {
 		fieldValue reflect.Value
 		value      string
 	}
+	isRegularQueryField := make(map[string]bool) // tracks fields that are not value-discriminant field (for checking field name collisions)
 	valueDiscriminantFields := make(map[string][]valueField)
 
 	for _, field := range reflect.VisibleFields(optsType) {
@@ -85,6 +86,9 @@ func BuildQueryString(opts any) (url.Values, error) {
 
 		// value-discriminant fields: collect and skip normal processing
 		if value, ok := maybeValue.Unpack(); ok {
+			if isRegularQueryField[key] {
+				panic(fmt.Sprintf(`key %q cannot be declared as both a regular field and a value-discriminant field`, key))
+			}
 			if fieldValue.Kind() != reflect.Bool {
 				panic(fmt.Sprintf(`field %q has "value:" option but is not a bool`, field.Name))
 			}
@@ -93,6 +97,12 @@ func BuildQueryString(opts any) (url.Values, error) {
 				value:      value,
 			})
 			continue
+		}
+
+		// check collision between normal and value-discriminant fields
+		isRegularQueryField[key] = true
+		if _, exists := valueDiscriminantFields[key]; exists {
+			panic(fmt.Sprintf(`key %q cannot be declared as both a regular field and a value-discriminant field`, key))
 		}
 
 		// if field not set, skip
