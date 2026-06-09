@@ -19,7 +19,7 @@ import (
 // Fields are mapped by their "q" tag, mirroring the behavior of [opts.BuildQueryString].
 // For example:
 //
-//	type struct Something {
+//	type Something struct {
 //	   Bar string `q:"x_bar"`
 //	   Baz int    `q:"lorem_ipsum"`
 //	}

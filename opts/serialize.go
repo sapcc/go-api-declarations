@@ -20,7 +20,7 @@ import (
 // It accepts a tagged structure and expands it into a URL struct. Field names are
 // converted into query parameters based on a "q" tag. For example:
 //
-//	type struct Something {
+//	type Something struct {
 //	   Bar string `q:"x_bar"`
 //	   Baz int    `q:"lorem_ipsum"`
 //	}
@@ -76,6 +76,9 @@ func BuildQueryString(opts any) (url.Values, error) {
 		}
 		if qTag == "" {
 			panic(fmt.Sprintf(`expected %q to have a "q:"-tag`, field.Name))
+		}
+		if !fieldValue.CanInterface() {
+			panic(fmt.Sprintf(`field %q is unexported and therefore cannot be read`, field.Name))
 		}
 		key, maybeTimeFormat, maybeValue, required := parseQTag(qTag)
 
@@ -164,7 +167,7 @@ func BuildQueryString(opts any) (url.Values, error) {
 }
 
 // serializeSingleValue converts a reflect.Value to its string representation for query parameters.
-// Zero values are skipped.
+// Zero values are serialized, also - so they need to be taken care of separately, if that is no intentional.
 func serializeSingleValue(v reflect.Value, timeFormat Option[string]) string {
 	// Dereference pointers.
 	for v.Kind() == reflect.Pointer {

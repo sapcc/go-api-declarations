@@ -163,10 +163,12 @@ func checkSerializingPanic(t *testing.T, panicMsg string, fn func()) {
 		r := recover()
 		if r == nil {
 			t.Errorf("expected panic %q, but function did not panic", panicMsg)
+			return
 		}
 		got, ok := r.(string)
 		if !ok {
 			t.Errorf("expected panic with string %q, but got non-string panic: %v", panicMsg, r)
+			return
 		}
 		if got != panicMsg {
 			t.Errorf("expected panic: %s, but got: %s", panicMsg, got)
