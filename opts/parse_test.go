@@ -258,7 +258,7 @@ func TestOptParserErrors(t *testing.T) {
 	r := httptest.NewRequest(http.MethodGet, "/some/unimportant/path", http.NoBody)
 
 	// non-struct type parameter (panics)
-	checkParsingPanic(t, "expected opts to point to a struct", func() {
+	checkParsingPanic(t, "options type is not a struct", func() {
 		opts.ParseQueryString[int](r.URL.Query()) //nolint:errcheck // won't get to this part
 	})
 

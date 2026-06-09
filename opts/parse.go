@@ -77,110 +77,52 @@ import (
 //
 // [option.Option]: https://pkg.go.dev/go.xyrillian.de/gg/option#Option
 func ParseQueryString[T any](query url.Values) (T, error) {
+	// NOTE: This function body should be as short as possible to reduce the binary size after monomorphization.
+	//       Any expression that does not depend on type T should be factored out into a reusable function.
 	var opts T
-	optsValue := reflect.ValueOf(&opts).Elem()
-	if optsValue.Kind() != reflect.Struct {
-		panic("expected opts to point to a struct")
-	}
+	err := parseQueryString(query, reflect.ValueOf(&opts).Elem())
+	return opts, err
+}
 
-	// build map of q-tags to field values
-	optsType := optsValue.Type()
-	type optMeta struct {
-		structField       reflect.StructField
-		fieldValue        reflect.Value
-		maybeTimeFormat   Option[string]
-		requiredAndUnseen bool
-	}
-	knownOpts := make(map[string]optMeta, optsType.NumField())
-	valueFields := make(map[string]map[string]reflect.Value) // key → list of value-discriminant bools
-	for _, field := range reflect.VisibleFields(optsType) {
-		fieldValue := optsValue.FieldByIndex(field.Index)
-		qTag := field.Tag.Get("q")
-		if field.Anonymous {
-			// this is for struct embedding to work
-			if qTag != "" {
-				panic(fmt.Sprintf(`expected embedded struct %q to have no "q:"-tag`, field.Name))
-			}
-			continue
-		}
-		if qTag == "" {
-			panic(fmt.Sprintf(`expected %q to have a "q:"-tag`, field.Name))
-		}
-		optKey, maybeTimeFormat, maybeValue, required := parseQTag(qTag)
-		if !fieldValue.CanSet() {
-			panic(fmt.Sprintf(`field %q is unexported and therefore cannot be set`, field.Name))
-		}
-
-		// value-discriminant fields go into a separate structure
-		if value, ok := maybeValue.Unpack(); ok {
-			if fieldValue.Kind() != reflect.Bool {
-				panic(fmt.Sprintf(`field %q has "value:" option but is not a bool`, field.Name))
-			}
-			if maybeTimeFormat.IsSome() {
-				panic(fmt.Sprintf(`field %q cannot have both "value:" and "format:" options`, field.Name))
-			}
-			if _, keyExists := valueFields[optKey]; !keyExists {
-				valueFields[optKey] = make(map[string]reflect.Value)
-			}
-			valueFields[optKey][value] = fieldValue
-			continue
-		}
-
-		// check if format is set when required
-		if typeNeedsTimeFormat(fieldValue.Type()) && maybeTimeFormat.IsNone() {
-			panic(fmt.Sprintf(`time format is missing for field %q`, field.Name))
-		}
-
-		knownOpts[optKey] = optMeta{
-			structField:       field,
-			fieldValue:        fieldValue,
-			maybeTimeFormat:   maybeTimeFormat,
-			requiredAndUnseen: required,
-		}
-	}
-
-	// keys may not be used for both regular fields and value-discriminant fields
-	for optKey := range valueFields {
-		if _, exists := knownOpts[optKey]; exists {
-			panic(fmt.Sprintf(`key %q cannot be declared as both a regular field and a value-discriminant field`, optKey))
-		}
-	}
+func parseQueryString(query url.Values, optsValue reflect.Value) error {
+	si := getStructInfo(optsValue.Type())
 
 	// iterate the query
-	for optKey, rawValues := range query {
-		// check value-discriminant fields first
-		if _, isValueField := valueFields[optKey]; isValueField {
+	seen := make(map[string]bool)
+	for key, rawValues := range query {
+		// case 1: field is a flag set
+		if fs, ok := si.FlagSets[key]; ok {
 			for _, rawValue := range rawValues {
-				if valueField, matched := valueFields[optKey][rawValue]; matched {
-					valueField.SetBool(true)
-					continue
+				if index, ok := fs.Indexes[rawValue]; ok {
+					optsValue.FieldByIndex(index).SetBool(true)
+				} else {
+					return fmt.Errorf("unknown value %q for query parameter %q", rawValue, key)
 				}
-				return opts, fmt.Errorf("unknown value %q for query parameter %q", rawValue, optKey)
 			}
 			continue
 		}
 
-		meta, ok := knownOpts[optKey]
+		// case 2: field is an option
+		opt, ok := si.Options[key]
 		if !ok {
-			return opts, fmt.Errorf("unknown query parameter %q", optKey)
+			return fmt.Errorf("unknown query parameter %q", key)
 		}
-		err := setField(meta.structField, meta.fieldValue, rawValues, meta.maybeTimeFormat)
+		err := setField(optsValue.FieldByIndex(opt.Index), rawValues, opt.TimeFormat)
 		if err != nil {
-			return opts, fmt.Errorf("invalid value for query parameter %q: %w", optKey, err)
+			return fmt.Errorf("invalid value for query parameter %q: %w", key, err)
 		}
-		if !isOnlyEmptyStrings(rawValues) && meta.requiredAndUnseen {
-			meta.requiredAndUnseen = false
-			knownOpts[optKey] = meta
+		if !isOnlyEmptyStrings(rawValues) {
+			seen[key] = true
 		}
 	}
 
 	// check that no required fields are missing
-	for optKey, meta := range knownOpts {
-		if meta.requiredAndUnseen {
-			return opts, fmt.Errorf("missing value for query parameter %q", optKey)
+	for key, opt := range si.Options {
+		if opt.Required && !seen[key] {
+			return fmt.Errorf("missing value for query parameter %q", key)
 		}
 	}
-	return opts, nil
+	return nil
 }
 
 // isOnlyEmptyStrings checks if all rawValues are only emptyStrings.
@@ -195,7 +137,7 @@ func isOnlyEmptyStrings(rawValues []string) bool {
 
 // setField writes values into a single struct field.
 // The timeFormat parameter carries the format option from the q tag (may be empty).
-func setField(f reflect.StructField, fv reflect.Value, values []string, timeFormat Option[string]) error {
+func setField(fv reflect.Value, values []string, timeFormat Option[string]) error {
 	if len(values) == 0 {
 		return nil
 	}
@@ -217,7 +159,7 @@ func setField(f reflect.StructField, fv reflect.Value, values []string, timeForm
 			destVal := reflect.ValueOf(dest).Elem()         // *T
 			destVal.Set(reflect.New(destVal.Type().Elem())) // allocate T, set *T
 			inner := destVal.Elem()                         // T (the actual value to fill)
-			return setField(f, inner, values, timeFormat)
+			return setField(inner, values, timeFormat)
 		}
 		type yamlUnmarshaler interface {
 			UnmarshalYAML(func(any) error) error

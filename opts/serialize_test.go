@@ -254,5 +254,5 @@ func TestBuildQueryStringErrors(t *testing.T) {
 		Name string `q:"name,required"`
 	}
 	_, err := opts.BuildQueryString(requiredOpts{})
-	th.AssertErr(t, "required query parameter [Name] not set", err)
+	th.AssertErr(t, `required query parameter "name" not set`, err)
 }
