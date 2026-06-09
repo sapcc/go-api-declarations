@@ -43,7 +43,7 @@ import (
 // [gophercloud.BuildQueryString]: https://pkg.go.dev/github.com/gophercloud/gophercloud/v2#BuildQueryString
 func BuildQueryString(opts any) (url.Values, error) {
 	optsValue := reflect.ValueOf(opts)
-	if optsValue.Kind() == reflect.Ptr { //nolint: govet // won't inline this...
+	if optsValue.Kind() == reflect.Pointer {
 		if optsValue.IsNil() {
 			panic("opts is a nil pointer")
 		}
@@ -101,7 +101,7 @@ func BuildQueryString(opts any) (url.Values, error) {
 		}
 	loop:
 		switch fieldValue.Kind() {
-		case reflect.Ptr: //nolint: govet // won't inline this...
+		case reflect.Pointer:
 			fieldValue = fieldValue.Elem()
 			goto loop
 		// only handle non-single-values here, rest is done by serializeSingleValue()
@@ -117,12 +117,12 @@ func BuildQueryString(opts any) (url.Values, error) {
 			} else if m := fieldValue.MethodByName("AsPointer"); m.IsValid() {
 				// Option[T] — unwrap via AsPointer
 				results := m.Call(nil)
-				if len(results) == 1 && results[0].Kind() == reflect.Ptr && !results[0].IsNil() { //nolint:govet // won't inline this...
+				if len(results) == 1 && results[0].Kind() == reflect.Pointer && !results[0].IsNil() {
 					params.Add(key, serializeSingleValue(results[0].Elem(), maybeTimeFormat))
 				}
 			} else {
 				// defense in depth: already handled by canBeSkipped function
-				panic("for structs only implementers of isZeroer are supported")
+				panic("structs other than time.Time and option.Option[T] are not supported")
 			}
 		case reflect.Map:
 			keys := fieldValue.MapKeys()
@@ -157,7 +157,7 @@ func BuildQueryString(opts any) (url.Values, error) {
 // Zero values are skipped.
 func serializeSingleValue(v reflect.Value, timeFormat Option[string]) string {
 	// Dereference pointers.
-	for v.Kind() == reflect.Ptr { //nolint:govet // won't inline this...
+	for v.Kind() == reflect.Pointer {
 		v = v.Elem()
 	}
 	switch v.Kind() {
@@ -187,7 +187,7 @@ func serializeSingleValue(v reflect.Value, timeFormat Option[string]) string {
 		// handle Option[T]: try to unwrap via AsPointer() method.
 		if m := v.MethodByName("AsPointer"); m.IsValid() {
 			results := m.Call(nil)
-			if len(results) == 1 && results[0].Kind() == reflect.Ptr && !results[0].IsNil() { //nolint:govet // won't inline this...
+			if len(results) == 1 && results[0].Kind() == reflect.Pointer && !results[0].IsNil() {
 				return serializeSingleValue(results[0].Elem(), timeFormat)
 			}
 		}
@@ -198,36 +198,38 @@ func serializeSingleValue(v reflect.Value, timeFormat Option[string]) string {
 // canBeSkipped checks if a value can be skipped for serialization into a query string.
 // Required params are never skipped. Otherwise, isZero() of the value is checked.
 // Special handling is applied to
-// - structs (check isZero() interface)
-// - slices, arrays, maps (considered zero when nil or all values are zero)
+// - structs (only time.Time and Option[T] are supported; others panic)
+// - pointers (nil means skippable)
 func canBeSkipped(v reflect.Value, required bool) bool {
+	// reject functions
+	if v.Kind() == reflect.Func {
+		panic("functions are not supported")
+	}
+
 	if required {
 		return false
 	}
+
 	// check pointers
-	if v.Kind() == reflect.Ptr { //nolint:govet // won't inline this...
+	if v.Kind() == reflect.Pointer {
 		if v.IsNil() {
-			// Guard against nil pointers whose element type has pointer-receiver IsZero.
 			return true
 		}
 		// Dereference the pointer and check the element.
 		return canBeSkipped(v.Elem(), false)
 	}
 
-	// check for types implementing IsZero() bool (e.g. Option[T], time.Time).
-	if v.CanInterface() {
-		type isZeroer interface{ IsZero() bool }
-		if z, ok := v.Interface().(isZeroer); ok {
-			return z.IsZero()
+	// structs: only time.Time and Option[T] are supported
+	if v.Kind() == reflect.Struct {
+		if v.Type() == reflect.TypeFor[time.Time]() {
+			return v.Interface().(time.Time).IsZero()
 		}
+		if _, isOption := v.Type().MethodByName("AsPointer"); isOption {
+			type isZeroer interface{ IsZero() bool }
+			return v.Interface().(isZeroer).IsZero()
+		}
+		panic("structs other than time.Time and option.Option[T] are not supported")
 	}
 
-	switch v.Kind() {
-	case reflect.Func:
-		panic("functions are not supported")
-	case reflect.Struct:
-		panic("for structs only implementers of isZeroer are supported")
-	default:
-		return v.IsZero()
-	}
+	return v.IsZero()
 }

@@ -209,7 +209,7 @@ func TestBuildQueryStringErrors(t *testing.T) {
 	type testNested2 struct {
 		Nested testNested `q:"nested"`
 	}
-	checkSerializingPanic(t, "for structs only implementers of isZeroer are supported", func() {
+	checkSerializingPanic(t, "structs other than time.Time and option.Option[T] are not supported", func() {
 		opts.BuildQueryString(testNested2{}) //nolint:errcheck // won't get to this part
 	})
 
