@@ -83,8 +83,8 @@ func walkByReference(v reflect.Value, action func(reflect.Value)) {
 			return
 		}
 
-		for idx := range v.NumField() {
-			walkByReference(v.Field(idx), action)
+		for _, field := range v.Fields() {
+			walkByReference(field, action)
 		}
 	}
 }

@@ -97,11 +97,11 @@ var projectMockResources = &ProjectResourceReports{
 			Unit: limes.UnitBytes,
 		},
 		PerAZ: ProjectAZResourceReports{
-			"az-one": {Quota: p2u64(6), Usage: 2, Committed: map[string]uint64{"1 year": 3}},
-			"az-two": {Quota: p2u64(4), Usage: 0},
+			"az-one": {Quota: new(uint64(6)), Usage: 2, Committed: map[string]uint64{"1 year": 3}},
+			"az-two": {Quota: new(uint64(4)), Usage: 0},
 		},
-		Quota:       p2u64(10),
-		UsableQuota: p2u64(11),
+		Quota:       new(uint64(10)),
+		UsableQuota: new(uint64(11)),
 		Usage:       2,
 	},
 	"things": &ProjectResourceReport{
@@ -111,8 +111,8 @@ var projectMockResources = &ProjectResourceReports{
 		PerAZ: ProjectAZResourceReports{
 			limes.AvailabilityZoneAny: {Usage: 2},
 		},
-		Quota:       p2u64(10),
-		UsableQuota: p2u64(10),
+		Quota:       new(uint64(10)),
+		UsableQuota: new(uint64(10)),
 		Usage:       2,
 	},
 }

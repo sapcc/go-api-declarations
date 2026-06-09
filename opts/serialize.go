@@ -1,0 +1,248 @@
+// SPDX-FileCopyrightText: 2026 SAP SE or an SAP affiliate company
+// SPDX-License-Identifier: Apache-2.0
+
+package opts
+
+import (
+	"fmt"
+	"net/url"
+	"reflect"
+	"slices"
+	"strconv"
+	"strings"
+	"time"
+
+	. "go.xyrillian.de/gg/option"
+)
+
+// BuildQueryString is a function to be used by request methods with opts structs.
+// It's inspired by [gophercloud.BuildQueryString] with partially stricter behavior.
+// It accepts a tagged structure and expands it into a URL struct. Field names are
+// converted into query parameters based on a "q" tag. For example:
+//
+//	type Something struct {
+//	   Bar string `q:"x_bar"`
+//	   Baz int    `q:"lorem_ipsum"`
+//	}
+//	instance := Something{
+//	   Bar: "AAA",
+//	   Baz: 1,
+//	}
+//
+// will be converted into
+//
+//	?x_bar=AAA&lorem_ipsum=1
+//
+// On configuration errors (e.g. non-struct opts, opts with non-q-tagged fields)
+// the function panics. On user errors (e.g. missing required field) an error
+// is returned. On success, url.Values are returned according to the opts.
+//
+// This function understands and expects the same values for the "q" tag as [opts.ParseQueryString].
+// See documentation over there for details.
+//
+// [gophercloud.BuildQueryString]: https://pkg.go.dev/github.com/gophercloud/gophercloud/v2#BuildQueryString
+func BuildQueryString(opts any) (url.Values, error) {
+	optsValue := reflect.ValueOf(opts)
+	if optsValue.Kind() == reflect.Pointer {
+		if optsValue.IsNil() {
+			panic("opts is a nil pointer")
+		}
+		optsValue = optsValue.Elem()
+	}
+	optsType := optsValue.Type()
+	params := url.Values{}
+
+	if optsValue.Kind() != reflect.Struct {
+		panic("options type is not a struct")
+	}
+
+	// Collect value-discriminant fields (bool fields with "value:" option) separately.
+	type valueField struct {
+		fieldValue reflect.Value
+		value      string
+	}
+	isRegularQueryField := make(map[string]bool) // tracks fields that are not value-discriminant field (for checking field name collisions)
+	valueDiscriminantFields := make(map[string][]valueField)
+
+	for _, field := range reflect.VisibleFields(optsType) {
+		fieldValue := optsValue.FieldByIndex(field.Index)
+		qTag := field.Tag.Get("q")
+		if field.Anonymous {
+			// this is for struct embedding to work
+			if qTag != "" {
+				panic(fmt.Sprintf(`expected embedded struct %q to have no "q:"-tag`, field.Name))
+			}
+			continue
+		}
+		if qTag == "" {
+			panic(fmt.Sprintf(`expected %q to have a "q:"-tag`, field.Name))
+		}
+		if !fieldValue.CanInterface() {
+			panic(fmt.Sprintf(`field %q is unexported and therefore cannot be read`, field.Name))
+		}
+		key, maybeTimeFormat, maybeValue, required := parseQTag(qTag)
+
+		// check if format is set when required
+		if typeNeedsTimeFormat(fieldValue.Type()) && maybeTimeFormat.IsNone() {
+			panic(fmt.Sprintf(`time format is missing for field %q`, field.Name))
+		}
+
+		// value-discriminant fields: collect and skip normal processing
+		if value, ok := maybeValue.Unpack(); ok {
+			if isRegularQueryField[key] {
+				panic(fmt.Sprintf(`key %q cannot be declared as both a regular field and a value-discriminant field`, key))
+			}
+			if fieldValue.Kind() != reflect.Bool {
+				panic(fmt.Sprintf(`field %q has "value:" option but is not a bool`, field.Name))
+			}
+			valueDiscriminantFields[key] = append(valueDiscriminantFields[key], valueField{
+				fieldValue: fieldValue,
+				value:      value,
+			})
+			continue
+		}
+
+		// check collision between normal and value-discriminant fields
+		isRegularQueryField[key] = true
+		if _, exists := valueDiscriminantFields[key]; exists {
+			panic(fmt.Sprintf(`key %q cannot be declared as both a regular field and a value-discriminant field`, key))
+		}
+
+		// if field not set, skip
+		if canBeSkipped(fieldValue, required) {
+			continue
+		}
+	loop:
+		switch fieldValue.Kind() {
+		case reflect.Pointer:
+			fieldValue = fieldValue.Elem()
+			goto loop
+		// only handle non-single-values here, rest is done by serializeSingleValue()
+		case reflect.Slice:
+			values := make([]string, fieldValue.Len())
+			for i := range fieldValue.Len() {
+				values[i] = serializeSingleValue(fieldValue.Index(i), maybeTimeFormat)
+			}
+			params[key] = append(params[key], values...)
+		case reflect.Struct:
+			if fieldValue.Type() == reflect.TypeFor[time.Time]() {
+				params.Add(key, serializeSingleValue(fieldValue, maybeTimeFormat))
+			} else if m := fieldValue.MethodByName("AsPointer"); m.IsValid() {
+				// Option[T] — unwrap via AsPointer
+				results := m.Call(nil)
+				if len(results) == 1 && results[0].Kind() == reflect.Pointer && !results[0].IsNil() {
+					params.Add(key, serializeSingleValue(results[0].Elem(), maybeTimeFormat))
+				}
+			} else {
+				// defense in depth: already handled by canBeSkipped function
+				panic("structs other than time.Time and option.Option[T] are not supported")
+			}
+		case reflect.Map:
+			keys := fieldValue.MapKeys()
+			slices.SortFunc(keys, func(a, b reflect.Value) int {
+				return strings.Compare(serializeSingleValue(a, maybeTimeFormat), serializeSingleValue(b, maybeTimeFormat))
+			})
+			for _, k := range keys {
+				params.Add(key, serializeSingleValue(k, maybeTimeFormat)+":"+serializeSingleValue(fieldValue.MapIndex(k), maybeTimeFormat))
+			}
+		default:
+			params.Add(key, serializeSingleValue(fieldValue, maybeTimeFormat))
+		}
+		if required && isOnlyEmptyStrings(params[key]) {
+			// if the field is required, it cannot have no value (handles nil maps, slices, arrays)
+			return url.Values{}, fmt.Errorf("required query parameter [%s] not set", field.Name)
+		}
+	}
+
+	// Serialize value-discriminant fields: true bools emit their value string.
+	for key, vfs := range valueDiscriminantFields {
+		for _, vf := range vfs {
+			if vf.fieldValue.Bool() {
+				params.Add(key, vf.value)
+			}
+		}
+	}
+
+	return params, nil
+}
+
+// serializeSingleValue converts a reflect.Value to its string representation for query parameters.
+// Zero values are serialized, also - so they need to be taken care of separately, if that is no intentional.
+func serializeSingleValue(v reflect.Value, timeFormat Option[string]) string {
+	// Dereference pointers.
+	for v.Kind() == reflect.Pointer {
+		v = v.Elem()
+	}
+	switch v.Kind() {
+	case reflect.String:
+		return v.String()
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return strconv.FormatInt(v.Int(), 10)
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		return strconv.FormatUint(v.Uint(), 10)
+	case reflect.Bool:
+		return strconv.FormatBool(v.Bool())
+	case reflect.Float32, reflect.Float64:
+		return strconv.FormatFloat(v.Float(), 'g', -1, v.Type().Bits())
+	case reflect.Struct:
+		// handle time
+		if v.Type() == reflect.TypeFor[time.Time]() {
+			t := v.Interface().(time.Time)
+			tf := timeFormat.UnwrapOrPanic("timeFormat should have been set")
+			switch tf {
+			case unixTimeFormat:
+				return strconv.FormatInt(t.Unix(), 10)
+			default:
+				layout := nonUnixTimeFormats[tf]
+				return t.Format(layout)
+			}
+		}
+		// handle Option[T]: try to unwrap via AsPointer() method.
+		if m := v.MethodByName("AsPointer"); m.IsValid() {
+			results := m.Call(nil)
+			if len(results) == 1 && results[0].Kind() == reflect.Pointer && !results[0].IsNil() {
+				return serializeSingleValue(results[0].Elem(), timeFormat)
+			}
+		}
+	}
+	return fmt.Sprintf("%v", v.Interface())
+}
+
+// canBeSkipped checks if a value can be skipped for serialization into a query string.
+// Required params are never skipped. Otherwise, isZero() of the value is checked.
+// Special handling is applied to
+// - structs (only time.Time and Option[T] are supported; others panic)
+// - pointers (nil means skippable)
+func canBeSkipped(v reflect.Value, required bool) bool {
+	// reject functions
+	if v.Kind() == reflect.Func {
+		panic("functions are not supported")
+	}
+
+	if required {
+		return false
+	}
+
+	// check pointers
+	if v.Kind() == reflect.Pointer {
+		if v.IsNil() {
+			return true
+		}
+		// Dereference the pointer and check the element.
+		return canBeSkipped(v.Elem(), false)
+	}
+
+	// structs: only time.Time and Option[T] are supported
+	if v.Kind() == reflect.Struct {
+		if v.Type() == reflect.TypeFor[time.Time]() {
+			return v.Interface().(time.Time).IsZero()
+		}
+		if _, isOption := v.Type().MethodByName("AsPointer"); isOption {
+			type isZeroer interface{ IsZero() bool }
+			return v.Interface().(isZeroer).IsZero()
+		}
+		panic("structs other than time.Time and option.Option[T] are not supported")
+	}
+
+	return v.IsZero()
+}

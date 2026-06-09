@@ -81,17 +81,17 @@ var projectMockServicesRateLimit = &ProjectServiceReports{
 			"services/swift/account/container/object:create": {
 				RateInfo: RateInfo{Name: "services/swift/account/container/object:create"},
 				Limit:    1000,
-				Window:   p2window(1 * WindowSeconds),
+				Window:   new(1 * WindowSeconds),
 			},
 			"services/swift/account/container/object:delete": {
 				RateInfo: RateInfo{Name: "services/swift/account/container/object:delete"},
 				Limit:    1000,
-				Window:   p2window(1 * WindowSeconds),
+				Window:   new(1 * WindowSeconds),
 			},
 			"services/swift/account:create": {
 				RateInfo: RateInfo{Name: "services/swift/account:create"},
 				Limit:    10,
-				Window:   p2window(1 * WindowMinutes),
+				Window:   new(1 * WindowMinutes),
 			},
 		},
 		ScrapedAt: p2time(22),
@@ -108,23 +108,23 @@ var projectMockServicesRateLimitDeviatingFromDefaults = &ProjectServiceReports{
 			"services/swift/account/container/object:create": {
 				RateInfo:      RateInfo{Name: "services/swift/account/container/object:create"},
 				Limit:         1000,
-				Window:        p2window(1 * WindowSeconds),
+				Window:        new(1 * WindowSeconds),
 				DefaultLimit:  500,
-				DefaultWindow: p2window(1 * WindowSeconds),
+				DefaultWindow: new(1 * WindowSeconds),
 			},
 			"services/swift/account/container/object:delete": {
 				RateInfo:      RateInfo{Name: "services/swift/account/container/object:delete"},
 				Limit:         1000,
-				Window:        p2window(1 * WindowSeconds),
+				Window:        new(1 * WindowSeconds),
 				DefaultLimit:  500,
-				DefaultWindow: p2window(1 * WindowSeconds),
+				DefaultWindow: new(1 * WindowSeconds),
 			},
 			"services/swift/account:create": {
 				RateInfo:      RateInfo{Name: "services/swift/account:create"},
 				Limit:         10,
-				Window:        p2window(1 * WindowMinutes),
+				Window:        new(1 * WindowMinutes),
 				DefaultLimit:  5,
-				DefaultWindow: p2window(1 * WindowMinutes),
+				DefaultWindow: new(1 * WindowMinutes),
 			},
 		},
 		ScrapedAt: p2time(22),
@@ -156,8 +156,4 @@ func TestProjectServicesRateLimitDeviatingFromDefaultsUnmarshall(t *testing.T) {
 func p2time(timestamp int64) *limes.UnixEncodedTime {
 	t := limes.UnixEncodedTime{Time: time.Unix(timestamp, 0).UTC()}
 	return &t
-}
-
-func p2window(val Window) *Window {
-	return &val
 }
