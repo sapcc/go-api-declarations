@@ -188,9 +188,9 @@ func ParseQueryString[T any](query url.Values) (T, error) {
 }
 
 // isOnlyEmptyStrings checks if all rawValues are only emptyStrings.
-func isOnlyEmptyStrings(rawvalues []string) bool {
-	for _, rawvalue := range rawvalues {
-		if rawvalue != "" {
+func isOnlyEmptyStrings(rawValues []string) bool {
+	for _, rawValue := range rawValues {
+		if rawValue != "" {
 			return false
 		}
 	}
