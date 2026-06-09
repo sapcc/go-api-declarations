@@ -3,6 +3,7 @@
   "extends": [
     "config:recommended",
     "default:pinDigestsDisabled",
+    "docker:pinDigests",
     "mergeConfidence:all-badges"
   ],
   "assignees": [
@@ -11,7 +12,7 @@
   ],
   "commitMessageAction": "Renovate: Update",
   "constraints": {
-    "go": "1.24"
+    "go": "1.26"
   },
   "dependencyDashboardOSVVulnerabilitySummary": "all",
   "osvVulnerabilityAlerts": true,
