@@ -64,6 +64,17 @@ import (
 //
 //	Quux string `q:"quux,required"`               // ?foo=bar --> error
 //
+// Bool fields can use a "value" option to participate in value-discriminant parsing.
+// Multiple bool fields sharing the same key each declare a specific value they match.
+// When the query contains that value for the key, the corresponding bool is set to true:
+//
+//	WithDetails       bool `q:"with,value:details"`
+//	WithSubresources  bool `q:"with,value:subresources"`
+//	WithSubcapacities bool `q:"with,value:subcapacities"`
+//
+// Given the query string ?with=details&with=subcapacities, WithDetails and
+// WithSubcapacities will be true while WithSubresources remains false.
+//
 // [option.Option]: https://pkg.go.dev/go.xyrillian.de/gg/option#Option
 func ParseQueryString[T any](query url.Values) (T, error) {
 	var opts T
@@ -80,7 +91,13 @@ func ParseQueryString[T any](query url.Values) (T, error) {
 		maybeTimeFormat   Option[string]
 		requiredAndUnseen bool
 	}
+	// valueField tracks a bool field with a value-discriminant tag.
+	type valueField struct {
+		fieldValue reflect.Value
+		value      string
+	}
 	knownOpts := make(map[string]optMeta, optsType.NumField())
+	valueFields := make(map[string][]valueField) // key → list of value-discriminant bools
 	for _, field := range reflect.VisibleFields(optsType) {
 		fieldValue := optsValue.FieldByIndex(field.Index)
 		qTag := field.Tag.Get("q")
@@ -94,9 +111,24 @@ func ParseQueryString[T any](query url.Values) (T, error) {
 		if qTag == "" {
 			panic(fmt.Sprintf(`expected %q to have a "q:"-tag`, field.Name))
 		}
-		optKey, maybeTimeFormat, required := parseQTag(qTag)
+		optKey, maybeTimeFormat, maybeValue, required := parseQTag(qTag)
 		if !fieldValue.CanSet() {
 			panic(fmt.Sprintf(`field %q is unexported and therefore cannot be set`, optKey))
+		}
+
+		// value-discriminant fields go into a separate structure
+		if value, ok := maybeValue.Unpack(); ok {
+			if fieldValue.Kind() != reflect.Bool {
+				panic(fmt.Sprintf(`field %q has "value:" option but is not a bool`, field.Name))
+			}
+			if maybeTimeFormat.IsSome() {
+				panic(fmt.Sprintf(`field %q cannot have both "value:" and "format:" options`, field.Name))
+			}
+			valueFields[optKey] = append(valueFields[optKey], valueField{
+				fieldValue: fieldValue,
+				value:      value,
+			})
+			continue
 		}
 
 		// check if format is set when required
@@ -114,11 +146,28 @@ func ParseQueryString[T any](query url.Values) (T, error) {
 
 	// iterate the query
 	for optKey, rawValues := range query {
+		// check value-discriminant fields first
+		if vfs, ok := valueFields[optKey]; ok {
+			for _, rawValue := range rawValues {
+				matched := false
+				for _, vf := range vfs {
+					if rawValue == vf.value {
+						vf.fieldValue.SetBool(true)
+						matched = true
+						break
+					}
+				}
+				if !matched {
+					return opts, fmt.Errorf("unknown value %q for query parameter %q", rawValue, optKey)
+				}
+			}
+			continue
+		}
+
 		meta, ok := knownOpts[optKey]
 		if !ok {
 			return opts, fmt.Errorf("unknown query parameter %q", optKey)
 		}
-		// now, just set the value of the field accordingly
 		err := setField(meta.structField, meta.fieldValue, rawValues, meta.maybeTimeFormat)
 		if err != nil {
 			return opts, fmt.Errorf("invalid value for query parameter %q: %w", optKey, err)

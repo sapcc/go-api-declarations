@@ -27,15 +27,16 @@ var (
 	supportedHumanReadableFormats = strings.Join(slices.Sorted(slices.Values(append(slices.Collect(maps.Keys(nonUnixTimeFormats)), unixTimeFormat))), ", ")
 )
 
-// parseQTag parses a q struct tag value into its key name, optional format, and required flag.
-// The tag format is "key_name" or "key_name,format:FormatName,required".
+// parseQTag parses a q struct tag value into its key name, optional format, optional value discriminant, and required flag.
+// The tag format is "key_name" or "key_name,format:FormatName,required,value:ValueName".
 // Examples:
 //
-//	`q:"updated_at"`                      → key="updated_at", format="", required=false
-//	`q:"updated_at,format:Unix"`          → key="updated_at", format="Unix", required=false
-//	`q:"updated_at,required"`             → key="updated_at", format="", required=true
-//	`q:"updated_at,format:Unix,required"` → key="updated_at", format="Unix", required=true
-func parseQTag(tag string) (key string, format Option[string], required bool) {
+//	`q:"updated_at"`                      → key="updated_at", format=None, value=None, required=false
+//	`q:"updated_at,format:Unix"`          → key="updated_at", format=Some("Unix"), value=None, required=false
+//	`q:"updated_at,required"`             → key="updated_at", format=None, value=None, required=true
+//	`q:"updated_at,format:Unix,required"` → key="updated_at", format=Some("Unix"), value=None, required=true
+//	`q:"with,value:details"`              → key="with", format=None, value=Some("details"), required=false
+func parseQTag(tag string) (key string, format, value Option[string], required bool) {
 	parts := strings.SplitN(tag, ",", 2)
 	key = parts[0]
 	if len(parts) > 1 {
@@ -46,6 +47,8 @@ func parseQTag(tag string) (key string, format Option[string], required bool) {
 					panic(fmt.Sprintf("unsupported time format %q; accepted: %s", after, supportedHumanReadableFormats))
 				}
 				format = Some(after)
+			} else if after, found := strings.CutPrefix(opt, "value:"); found {
+				value = Some(after)
 			} else if opt == "required" {
 				required = true
 			} else {
@@ -53,7 +56,7 @@ func parseQTag(tag string) (key string, format Option[string], required bool) {
 			}
 		}
 	}
-	return key, format, required
+	return key, format, value, required
 }
 
 // typeNeedsTimeFormat reports whether t contains time.Time at any level

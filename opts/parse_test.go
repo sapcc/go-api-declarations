@@ -25,69 +25,72 @@ type EmbeddedOpts struct {
 
 type testOpts struct {
 	EmbeddedOpts
-	StringMap      map[string]string `q:"string_map"`
-	IntStringMap   map[int]string    `q:"int_string_map"`
-	StringIntMap   map[string]int    `q:"string_int_map"`
-	Bool           bool              `q:"bool"`
-	Time           time.Time         `q:"time,format:RFC3339"`
-	String         string            `q:"string"`
-	Int            int               `q:"int"`
-	Int8           int8              `q:"int8"`
-	Int16          int16             `q:"int16"`
-	Int32          int32             `q:"int32"`
-	Int64          int64             `q:"int64"`
-	Uint           uint              `q:"uint"`
-	Uint8          uint8             `q:"uint8"`
-	Uint16         uint16            `q:"uint16"`
-	Uint32         uint32            `q:"uint32"`
-	Uint64         uint64            `q:"uint64"`
-	Float32        float32           `q:"float32"`
-	Float64        float64           `q:"float64"`
-	PointerBool    *bool             `q:"pointer_bool"`
-	PointerTime    *time.Time        `q:"pointer_time,format:RFC3339"`
-	PointerString  *string           `q:"pointer_string"`
-	PointerInt     *int              `q:"pointer_int"`
-	PointerInt8    *int8             `q:"pointer_int8"`
-	PointerInt16   *int16            `q:"pointer_int16"`
-	PointerInt32   *int32            `q:"pointer_int32"`
-	PointerInt64   *int64            `q:"pointer_int64"`
-	PointerUint    *uint             `q:"pointer_uint"`
-	PointerUint8   *uint8            `q:"pointer_uint8"`
-	PointerUint16  *uint16           `q:"pointer_uint16"`
-	PointerUint32  *uint32           `q:"pointer_uint32"`
-	PointerUint64  *uint64           `q:"pointer_uint64"`
-	PointerFloat32 *float32          `q:"pointer_float32"`
-	PointerFloat64 *float64          `q:"pointer_float64"`
-	BoolSlice      []bool            `q:"bool_slice"`
-	TimeSlice      []time.Time       `q:"time_slice,format:RFC3339"`
-	StringSlice    []string          `q:"string_slice"`
-	IntSlice       []int             `q:"int_slice"`
-	Int8Slice      []int8            `q:"int8_slice"`
-	Int16Slice     []int16           `q:"int16_slice"`
-	Int32Slice     []int32           `q:"int32_slice"`
-	Int64Slice     []int64           `q:"int64_slice"`
-	UintSlice      []uint            `q:"uint_slice"`
-	Uint8Slice     []uint8           `q:"uint8_slice"`
-	Uint16Slice    []uint16          `q:"uint16_slice"`
-	Uint32Slice    []uint32          `q:"uint32_slice"`
-	Uint64Slice    []uint64          `q:"uint64_slice"`
-	Float32Slice   []float32         `q:"float32_slice"`
-	Float64Slice   []float64         `q:"float64_slice"`
-	OptionBool     Option[bool]      `q:"option_bool"`
-	OptionTime     Option[time.Time] `q:"option_time,format:RFC3339"`
-	OptionString   Option[string]    `q:"option_string"`
-	OptionInt      Option[int]       `q:"option_int"`
-	OptionInt8     Option[int8]      `q:"option_int8"`
-	OptionInt16    Option[int16]     `q:"option_int16"`
-	OptionInt32    Option[int32]     `q:"option_int32"`
-	OptionInt64    Option[int64]     `q:"option_int64"`
-	OptionUint     Option[uint]      `q:"option_uint"`
-	OptionUint8    Option[uint8]     `q:"option_uint8"`
-	OptionUint16   Option[uint16]    `q:"option_uint16"`
-	OptionUint32   Option[uint32]    `q:"option_uint32"`
-	OptionUint64   Option[uint64]    `q:"option_uint64"`
-	OptionFloat32  Option[float32]   `q:"option_float32"`
-	OptionFloat64  Option[float64]   `q:"option_float64"`
+	StringMap         map[string]string `q:"string_map"`
+	IntStringMap      map[int]string    `q:"int_string_map"`
+	StringIntMap      map[string]int    `q:"string_int_map"`
+	Bool              bool              `q:"bool"`
+	Time              time.Time         `q:"time,format:RFC3339"`
+	String            string            `q:"string"`
+	Int               int               `q:"int"`
+	Int8              int8              `q:"int8"`
+	Int16             int16             `q:"int16"`
+	Int32             int32             `q:"int32"`
+	Int64             int64             `q:"int64"`
+	Uint              uint              `q:"uint"`
+	Uint8             uint8             `q:"uint8"`
+	Uint16            uint16            `q:"uint16"`
+	Uint32            uint32            `q:"uint32"`
+	Uint64            uint64            `q:"uint64"`
+	Float32           float32           `q:"float32"`
+	Float64           float64           `q:"float64"`
+	PointerBool       *bool             `q:"pointer_bool"`
+	PointerTime       *time.Time        `q:"pointer_time,format:RFC3339"`
+	PointerString     *string           `q:"pointer_string"`
+	PointerInt        *int              `q:"pointer_int"`
+	PointerInt8       *int8             `q:"pointer_int8"`
+	PointerInt16      *int16            `q:"pointer_int16"`
+	PointerInt32      *int32            `q:"pointer_int32"`
+	PointerInt64      *int64            `q:"pointer_int64"`
+	PointerUint       *uint             `q:"pointer_uint"`
+	PointerUint8      *uint8            `q:"pointer_uint8"`
+	PointerUint16     *uint16           `q:"pointer_uint16"`
+	PointerUint32     *uint32           `q:"pointer_uint32"`
+	PointerUint64     *uint64           `q:"pointer_uint64"`
+	PointerFloat32    *float32          `q:"pointer_float32"`
+	PointerFloat64    *float64          `q:"pointer_float64"`
+	BoolSlice         []bool            `q:"bool_slice"`
+	TimeSlice         []time.Time       `q:"time_slice,format:RFC3339"`
+	StringSlice       []string          `q:"string_slice"`
+	IntSlice          []int             `q:"int_slice"`
+	Int8Slice         []int8            `q:"int8_slice"`
+	Int16Slice        []int16           `q:"int16_slice"`
+	Int32Slice        []int32           `q:"int32_slice"`
+	Int64Slice        []int64           `q:"int64_slice"`
+	UintSlice         []uint            `q:"uint_slice"`
+	Uint8Slice        []uint8           `q:"uint8_slice"`
+	Uint16Slice       []uint16          `q:"uint16_slice"`
+	Uint32Slice       []uint32          `q:"uint32_slice"`
+	Uint64Slice       []uint64          `q:"uint64_slice"`
+	Float32Slice      []float32         `q:"float32_slice"`
+	Float64Slice      []float64         `q:"float64_slice"`
+	OptionBool        Option[bool]      `q:"option_bool"`
+	OptionTime        Option[time.Time] `q:"option_time,format:RFC3339"`
+	OptionString      Option[string]    `q:"option_string"`
+	OptionInt         Option[int]       `q:"option_int"`
+	OptionInt8        Option[int8]      `q:"option_int8"`
+	OptionInt16       Option[int16]     `q:"option_int16"`
+	OptionInt32       Option[int32]     `q:"option_int32"`
+	OptionInt64       Option[int64]     `q:"option_int64"`
+	OptionUint        Option[uint]      `q:"option_uint"`
+	OptionUint8       Option[uint8]     `q:"option_uint8"`
+	OptionUint16      Option[uint16]    `q:"option_uint16"`
+	OptionUint32      Option[uint32]    `q:"option_uint32"`
+	OptionUint64      Option[uint64]    `q:"option_uint64"`
+	OptionFloat32     Option[float32]   `q:"option_float32"`
+	OptionFloat64     Option[float64]   `q:"option_float64"`
+	WithDetails       bool              `q:"with,value:details"`
+	WithSubresources  bool              `q:"with,value:subresources"`
+	WithSubcapacities bool              `q:"with,value:subcapacities"`
 }
 
 func checkParsingHappyPath(t *testing.T, variable, query string, result testOpts) {
@@ -217,6 +220,10 @@ func TestOptParserHappyPaths(t *testing.T) {
 	// multiple fields at once
 	checkParsingHappyPath(t, "multiple fields", "?bool=true&string=hi&int=5&option_string=world",
 		testOpts{Bool: true, String: "hi", Int: 5, OptionString: Some("world")})
+
+	// value-discriminant bools
+	checkParsingHappyPath(t, "value-discriminant bools", "?with=details&with=subcapacities",
+		testOpts{WithDetails: true, WithSubresources: false, WithSubcapacities: true})
 }
 
 func checkParsingPanic(t *testing.T, panicMsg string, fn func()) {

@@ -55,6 +55,14 @@ func BuildQueryString(opts any) (url.Values, error) {
 	if optsValue.Kind() != reflect.Struct {
 		panic("options type is not a struct")
 	}
+
+	// Collect value-discriminant fields (bool fields with "value:" option) separately.
+	type valueField struct {
+		fieldValue reflect.Value
+		value      string
+	}
+	valueDiscriminantFields := make(map[string][]valueField)
+
 	for _, field := range reflect.VisibleFields(optsType) {
 		fieldValue := optsValue.FieldByIndex(field.Index)
 		qTag := field.Tag.Get("q")
@@ -68,11 +76,23 @@ func BuildQueryString(opts any) (url.Values, error) {
 		if qTag == "" {
 			panic(fmt.Sprintf(`expected %q to have a "q:"-tag`, field.Name))
 		}
-		key, maybeTimeFormat, required := parseQTag(qTag)
+		key, maybeTimeFormat, maybeValue, required := parseQTag(qTag)
 
 		// check if format is set when required
 		if typeNeedsTimeFormat(fieldValue.Type()) && maybeTimeFormat.IsNone() {
 			panic(fmt.Sprintf(`time format is missing for field %q`, field.Name))
+		}
+
+		// value-discriminant fields: collect and skip normal processing
+		if value, ok := maybeValue.Unpack(); ok {
+			if fieldValue.Kind() != reflect.Bool {
+				panic(fmt.Sprintf(`field %q has "value:" option but is not a bool`, field.Name))
+			}
+			valueDiscriminantFields[key] = append(valueDiscriminantFields[key], valueField{
+				fieldValue: fieldValue,
+				value:      value,
+			})
+			continue
 		}
 
 		// if field not set, skip
@@ -120,6 +140,16 @@ func BuildQueryString(opts any) (url.Values, error) {
 			return url.Values{}, fmt.Errorf("required query parameter [%s] not set", field.Name)
 		}
 	}
+
+	// Serialize value-discriminant fields: true bools emit their value string.
+	for key, vfs := range valueDiscriminantFields {
+		for _, vf := range vfs {
+			if vf.fieldValue.Bool() {
+				params.Add(key, vf.value)
+			}
+		}
+	}
+
 	return params, nil
 }
 

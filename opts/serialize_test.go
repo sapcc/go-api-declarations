@@ -150,6 +150,11 @@ func TestBuildQueryStringHappyPaths(t *testing.T) {
 	checkSerializingHappyPath(t, "multiple fields",
 		testOpts{Bool: true, String: "hi", Int: 5, OptionString: Some("world")},
 		"bool=true&int=5&option_string=world&string=hi")
+
+	// value-discriminant bools (2 set, 1 unset)
+	checkSerializingHappyPath(t, "value-discriminant bools",
+		testOpts{WithDetails: true, WithSubresources: false, WithSubcapacities: true},
+		"with=details&with=subcapacities")
 }
 
 func checkSerializingPanic(t *testing.T, panicMsg string, fn func()) {
