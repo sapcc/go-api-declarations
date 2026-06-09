@@ -91,13 +91,8 @@ func ParseQueryString[T any](query url.Values) (T, error) {
 		maybeTimeFormat   Option[string]
 		requiredAndUnseen bool
 	}
-	// valueField tracks a bool field with a value-discriminant tag.
-	type valueField struct {
-		fieldValue reflect.Value
-		value      string
-	}
 	knownOpts := make(map[string]optMeta, optsType.NumField())
-	valueFields := make(map[string][]valueField) // key → list of value-discriminant bools
+	valueFields := make(map[string]map[string]reflect.Value) // key → list of value-discriminant bools
 	for _, field := range reflect.VisibleFields(optsType) {
 		fieldValue := optsValue.FieldByIndex(field.Index)
 		qTag := field.Tag.Get("q")
@@ -124,10 +119,10 @@ func ParseQueryString[T any](query url.Values) (T, error) {
 			if maybeTimeFormat.IsSome() {
 				panic(fmt.Sprintf(`field %q cannot have both "value:" and "format:" options`, field.Name))
 			}
-			valueFields[optKey] = append(valueFields[optKey], valueField{
-				fieldValue: fieldValue,
-				value:      value,
-			})
+			if _, keyExists := valueFields[optKey]; !keyExists {
+				valueFields[optKey] = make(map[string]reflect.Value)
+			}
+			valueFields[optKey][value] = fieldValue
 			continue
 		}
 
@@ -154,19 +149,13 @@ func ParseQueryString[T any](query url.Values) (T, error) {
 	// iterate the query
 	for optKey, rawValues := range query {
 		// check value-discriminant fields first
-		if vfs, ok := valueFields[optKey]; ok {
+		if _, isValueField := valueFields[optKey]; isValueField {
 			for _, rawValue := range rawValues {
-				matched := false
-				for _, vf := range vfs {
-					if rawValue == vf.value {
-						vf.fieldValue.SetBool(true)
-						matched = true
-						break
-					}
+				if valueField, matched := valueFields[optKey][rawValue]; matched {
+					valueField.SetBool(true)
+					continue
 				}
-				if !matched {
-					return opts, fmt.Errorf("unknown value %q for query parameter %q", rawValue, optKey)
-				}
+				return opts, fmt.Errorf("unknown value %q for query parameter %q", rawValue, optKey)
 			}
 			continue
 		}
