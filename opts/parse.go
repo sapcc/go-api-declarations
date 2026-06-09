@@ -340,17 +340,17 @@ func parseMapValues(values []string, mapType reflect.Type) (reflect.Value, error
 	m := reflect.MakeMapWithSize(mapType, len(values))
 	for _, raw := range values {
 		raw = strings.TrimSpace(raw)
-		kv := strings.SplitN(raw, ":", 2)
-		if len(kv) != 2 {
+		keyStr, valStr, ok := strings.Cut(raw, ":")
+		if !ok {
 			return reflect.Value{}, fmt.Errorf("invalid map entry %q: expected key:value", raw)
 		}
-		key, err := parseScalar(kv[0], mapType.Key())
+		key, err := parseScalar(keyStr, mapType.Key())
 		if err != nil {
-			return reflect.Value{}, fmt.Errorf("invalid map key %q: %w", kv[0], err)
+			return reflect.Value{}, fmt.Errorf("invalid map key %q: %w", keyStr, err)
 		}
-		val, err := parseScalar(kv[1], mapType.Elem())
+		val, err := parseScalar(valStr, mapType.Elem())
 		if err != nil {
-			return reflect.Value{}, fmt.Errorf("invalid map value %q: %w", kv[1], err)
+			return reflect.Value{}, fmt.Errorf("invalid map value %q: %w", valStr, err)
 		}
 		m.SetMapIndex(key, val)
 	}

@@ -37,10 +37,9 @@ var (
 //	`q:"updated_at,format:Unix,required"` → key="updated_at", format=Some("Unix"), value=None, required=true
 //	`q:"with,value:details"`              → key="with", format=None, value=Some("details"), required=false
 func parseQTag(tag string) (key string, format, value Option[string], required bool) {
-	parts := strings.SplitN(tag, ",", 2)
-	key = parts[0]
-	if len(parts) > 1 {
-		for opt := range strings.SplitSeq(parts[1], ",") {
+	key, options, hasOptions := strings.Cut(tag, ",")
+	if hasOptions {
+		for opt := range strings.SplitSeq(options, ",") {
 			if after, found := strings.CutPrefix(opt, "format:"); found {
 				// all known formats are currently for time
 				if _, ok := nonUnixTimeFormats[after]; after != unixTimeFormat && !ok {
