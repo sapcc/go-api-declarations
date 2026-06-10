@@ -30,6 +30,7 @@ type testOpts struct {
 	StringIntMap      map[string]int    `q:"string_int_map"`
 	Bool              bool              `q:"bool"`
 	Time              time.Time         `q:"time,format:RFC3339"`
+	TimeUnix          time.Time         `q:"time_unix,format:Unix"`
 	String            string            `q:"string"`
 	Int               int               `q:"int"`
 	Int8              int8              `q:"int8"`
@@ -45,6 +46,7 @@ type testOpts struct {
 	Float64           float64           `q:"float64"`
 	PointerBool       *bool             `q:"pointer_bool"`
 	PointerTime       *time.Time        `q:"pointer_time,format:RFC3339"`
+	PointerTimeUnix   *time.Time        `q:"pointer_time_unix,format:Unix"`
 	PointerString     *string           `q:"pointer_string"`
 	PointerInt        *int              `q:"pointer_int"`
 	PointerInt8       *int8             `q:"pointer_int8"`
@@ -60,6 +62,7 @@ type testOpts struct {
 	PointerFloat64    *float64          `q:"pointer_float64"`
 	BoolSlice         []bool            `q:"bool_slice"`
 	TimeSlice         []time.Time       `q:"time_slice,format:RFC3339"`
+	TimeUnixSlice     []time.Time       `q:"time_unix_slice,format:Unix"`
 	StringSlice       []string          `q:"string_slice"`
 	IntSlice          []int             `q:"int_slice"`
 	Int8Slice         []int8            `q:"int8_slice"`
@@ -75,6 +78,7 @@ type testOpts struct {
 	Float64Slice      []float64         `q:"float64_slice"`
 	OptionBool        Option[bool]      `q:"option_bool"`
 	OptionTime        Option[time.Time] `q:"option_time,format:RFC3339"`
+	OptionTimeUnix    Option[time.Time] `q:"option_time_unix,format:Unix"`
 	OptionString      Option[string]    `q:"option_string"`
 	OptionInt         Option[int]       `q:"option_int"`
 	OptionInt8        Option[int8]      `q:"option_int8"`
@@ -122,10 +126,14 @@ func TestOptParserHappyPaths(t *testing.T) {
 	// time
 	checkParsingHappyPath(t, "time RFC3339", "?time=2000-01-01T00:00:00Z",
 		testOpts{Time: time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC)})
+	checkParsingHappyPath(t, "time Unix", "?time_unix=946684800",
+		testOpts{TimeUnix: time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC)})
 
 	// pointer time
 	checkParsingHappyPath(t, "pointer time RFC3339", "?pointer_time=2000-01-01T00:00:00Z",
 		testOpts{PointerTime: new(time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC))})
+	checkParsingHappyPath(t, "pointer time Unix", "?pointer_time_unix=946684800",
+		testOpts{PointerTimeUnix: new(time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC))})
 
 	// time slice
 	checkParsingHappyPath(t, "slice time RFC3339", "?time_slice=2000-01-01T00:00:00Z&time_slice=2001-01-01T00:00:00Z&time_slice=2002-01-01T00:00:00Z",
@@ -134,10 +142,18 @@ func TestOptParserHappyPaths(t *testing.T) {
 			time.Date(2001, 1, 1, 0, 0, 0, 0, time.UTC),
 			time.Date(2002, 1, 1, 0, 0, 0, 0, time.UTC),
 		}})
+	checkParsingHappyPath(t, "slice time Unix", "?time_unix_slice=946684800&time_unix_slice=978307200&time_unix_slice=1009843200",
+		testOpts{TimeUnixSlice: []time.Time{
+			time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC),
+			time.Date(2001, 1, 1, 0, 0, 0, 0, time.UTC),
+			time.Date(2002, 1, 1, 0, 0, 0, 0, time.UTC),
+		}})
 
 	// option time
 	checkParsingHappyPath(t, "option time RFC3339", "?option_time=2000-01-01T00:00:00Z",
 		testOpts{OptionTime: Some(time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC))})
+	checkParsingHappyPath(t, "option time Unix", "?option_time_unix=946684800",
+		testOpts{OptionTimeUnix: Some(time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC))})
 
 	// plain scalars
 	checkParsingHappyPath(t, "bool", "?bool=true", testOpts{Bool: true})
@@ -267,6 +283,11 @@ func TestOptParserErrors(t *testing.T) {
 	checkParsingError(t, "?pointer_time=foo", `invalid value for query parameter "pointer_time": cannot parse "foo" as RFC3339: parsing time "foo" as "2006-01-02T15:04:05Z07:00": cannot parse "foo" as "2006"`)
 	checkParsingError(t, "?time_slice=foo", `invalid value for query parameter "time_slice": element 0: cannot parse "foo" as RFC3339: parsing time "foo" as "2006-01-02T15:04:05Z07:00": cannot parse "foo" as "2006"`)
 	checkParsingError(t, "?option_time=foo", `invalid value for query parameter "option_time": cannot parse "foo" as RFC3339: parsing time "foo" as "2006-01-02T15:04:05Z07:00": cannot parse "foo" as "2006"`)
+
+	checkParsingError(t, "?time_unix=foo", `invalid value for query parameter "time_unix": cannot parse "foo" as Unix seconds: strconv.ParseInt: parsing "foo": invalid syntax`)
+	checkParsingError(t, "?pointer_time_unix=foo", `invalid value for query parameter "pointer_time_unix": cannot parse "foo" as Unix seconds: strconv.ParseInt: parsing "foo": invalid syntax`)
+	checkParsingError(t, "?time_unix_slice=foo", `invalid value for query parameter "time_unix_slice": element 0: cannot parse "foo" as Unix seconds: strconv.ParseInt: parsing "foo": invalid syntax`)
+	checkParsingError(t, "?option_time_unix=foo", `invalid value for query parameter "option_time_unix": cannot parse "foo" as Unix seconds: strconv.ParseInt: parsing "foo": invalid syntax`)
 
 	// multiple values: time
 	checkParsingError(t, "?time=2000-01-01&time=2001-01-01", `invalid value for query parameter "time": expected a single value, got 2`)

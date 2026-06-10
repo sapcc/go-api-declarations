@@ -78,7 +78,7 @@ func BuildQueryString(opts any) (url.Values, error) {
 }
 
 // serializeValue converts a reflect.Value to its string representation for query parameters.
-// Zero values are serialized, also - so they need to be taken care of separately, if that is no intentional.
+// Zero values are serialized, also - so they need to be taken care of separately, if that is not intentional.
 func serializeValue(value reflect.Value, maybeTimeFormat Option[string]) []string {
 	// dereference pointers
 	for value.Kind() == reflect.Pointer {
@@ -124,7 +124,7 @@ func serializeValue(value reflect.Value, maybeTimeFormat Option[string]) []strin
 }
 
 // serializeSingleValue converts a reflect.Value of a primitive type (e.g. int/string, but not slice/map) to its string representation for query parameters.
-// Zero values are serialized, also - so they need to be taken care of separately, if that is no intentional.
+// Zero values are serialized, also - so they need to be taken care of separately, if that is not intentional.
 func serializeSingleValue(v reflect.Value, timeFormat Option[string]) string {
 	// Dereference pointers.
 	for v.Kind() == reflect.Pointer {
