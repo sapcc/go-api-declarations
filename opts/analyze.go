@@ -66,10 +66,6 @@ func buildStructInfo(t reflect.Type) structInfo {
 		panic("options type is not a struct")
 	}
 	for _, field := range reflect.VisibleFields(t) {
-		if !field.IsExported() {
-			panicf(`field %q is unexported and therefore cannot be set`, field.Name)
-		}
-
 		// ignore embedded fields themselves and only consider the fields within embedded structs
 		qTag := field.Tag.Get("q")
 		if field.Anonymous {
@@ -77,6 +73,12 @@ func buildStructInfo(t reflect.Type) structInfo {
 				panicf(`expected embedded struct %q to have no "q:"-tag`, field.Name)
 			}
 			continue
+		}
+
+		// this check must come after ignoring embedded fields, because unexported
+		// anonymous fields are fine and can indeed be traversed into
+		if !field.IsExported() {
+			panicf(`field %q is unexported and therefore cannot be set`, field.Name)
 		}
 
 		// parse "q:"-tag
