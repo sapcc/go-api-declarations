@@ -228,6 +228,7 @@ func setField(fv reflect.Value, values []string, timeFormat Option[string]) erro
 		}
 		fv.Set(m)
 	default:
+		// defense in depth: should have been rejected in checkFieldTypeAllowed()
 		return fmt.Errorf("unsupported field type %s", fv.Type())
 	}
 	return nil
@@ -265,6 +266,7 @@ func parseScalar(s string, t reflect.Type) (reflect.Value, error) {
 		}
 		v.SetBool(b)
 	default:
+		// defense in depth: should not call this function for kinds not handled above
 		return reflect.Value{}, fmt.Errorf("unsupported type %s", t)
 	}
 	return v, nil

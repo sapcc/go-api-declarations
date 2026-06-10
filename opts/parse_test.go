@@ -241,6 +241,9 @@ func TestOptParserErrors(t *testing.T) {
 		opts.ParseQueryString[int](r.URL.Query()) //nolint:errcheck // won't get to this part
 	})
 
+	// unknown value in flagset
+	checkParsingError(t, "?with=details&with=nonsense", `unknown value "nonsense" for query parameter "with"`)
+
 	// missing required parameter
 	type testStringRequiredOpts struct {
 		String string `q:"string,required"`
@@ -293,6 +296,9 @@ func TestOptParserErrors(t *testing.T) {
 	checkParsingError(t, "?uint64=foo", `invalid value for query parameter "uint64": strconv.ParseUint: parsing "foo": invalid syntax`)
 	checkParsingError(t, "?float32=foo", `invalid value for query parameter "float32": strconv.ParseFloat: parsing "foo": invalid syntax`)
 	checkParsingError(t, "?float64=foo", `invalid value for query parameter "float64": strconv.ParseFloat: parsing "foo": invalid syntax`)
+	checkParsingError(t, "?int_slice=1&int_slice=foo", `invalid value for query parameter "int_slice": element 1: strconv.ParseInt: parsing "foo": invalid syntax`)
+	checkParsingError(t, "?int_string_map=foo:bar", `invalid value for query parameter "int_string_map": invalid map key "foo": strconv.ParseInt: parsing "foo": invalid syntax`)
+	checkParsingError(t, "?string_int_map=foo:bar", `invalid value for query parameter "string_int_map": invalid map value "bar": strconv.ParseInt: parsing "bar": invalid syntax`)
 
 	// wrong type: pointer of numbers
 	checkParsingError(t, "?pointer_int=foo", `invalid value for query parameter "pointer_int": strconv.ParseInt: parsing "foo": invalid syntax`)
