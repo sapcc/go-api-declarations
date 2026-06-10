@@ -149,8 +149,20 @@ func checkFieldTypeAllowed(t reflect.Type) error {
 	case isScalarFieldType(t):
 		return nil
 	case t.Kind() == reflect.Struct:
-		if t == timeType || t.Implements(anyOptionType) {
+		if t == timeType {
 			return nil
+		}
+		if t.Implements(anyOptionType) {
+			// Option.UnwrapOr() returns T, so that's an easy way to get to the contained type
+			if m, ok := t.MethodByName("UnwrapOr"); ok {
+				payloadType := m.Type.Out(0)
+				if isScalarFieldType(payloadType) || payloadType == timeType {
+					return nil
+				} else {
+					zero := reflect.New(payloadType).Elem().Interface()
+					return fmt.Errorf("option.Option[T] with structured payload T = %T is not supported", zero)
+				}
+			}
 		}
 		return errors.New("structs other than time.Time and option.Option[T] are not supported")
 	case t.Kind() == reflect.Slice:

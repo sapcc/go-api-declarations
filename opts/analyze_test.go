@@ -130,6 +130,10 @@ func TestAnalyzePanics(t *testing.T) {
 		Query    string           `q:"query"`
 		Settings []Option[string] `q:"settings"`
 	}](t, `slices of type option.Option[string] are not supported`)
+	expectAnalyzePanic[struct {
+		Query    string                    `q:"query"`
+		Settings Option[map[string]string] `q:"settings"`
+	}](t, `option.Option[T] with structured payload T = map[string]string is not supported`)
 
 	type point struct {
 		X int
