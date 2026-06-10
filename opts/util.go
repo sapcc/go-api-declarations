@@ -89,3 +89,14 @@ func typeNeedsTimeFormat(t reflect.Type) bool {
 	}
 	return false
 }
+
+func isScalarFieldType(t reflect.Type) bool {
+	switch t.Kind() {
+	case reflect.String, reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64,
+		reflect.Bool, reflect.Float32, reflect.Float64:
+		return true
+	default:
+		return false
+	}
+}

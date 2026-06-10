@@ -105,7 +105,7 @@ func serializeValue(value reflect.Value, maybeTimeFormat Option[string]) []strin
 				return nil
 			}
 		} else {
-			// defense in depth: already handled by canBeSkipped function
+			// defense in depth: should have been rejected in checkFieldTypeAllowed()
 			panic("structs other than time.Time and option.Option[T] are not supported")
 		}
 	case reflect.Map:
@@ -172,11 +172,6 @@ func serializeSingleValue(v reflect.Value, timeFormat Option[string]) string {
 // - structs (only time.Time and Option[T] are supported; others panic)
 // - pointers (nil means skippable)
 func canBeSkipped(v reflect.Value, required bool) bool {
-	// reject functions
-	if v.Kind() == reflect.Func {
-		panic("functions are not supported")
-	}
-
 	if required {
 		return false
 	}
@@ -199,6 +194,7 @@ func canBeSkipped(v reflect.Value, required bool) bool {
 			type isZeroer interface{ IsZero() bool }
 			return v.Interface().(isZeroer).IsZero()
 		}
+		// defense in depth: should have been rejected in checkFieldTypeAllowed()
 		panic("structs other than time.Time and option.Option[T] are not supported")
 	}
 

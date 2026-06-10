@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"net/url"
 	"reflect"
-	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -168,8 +167,7 @@ func setField(fv reflect.Value, values []string, timeFormat Option[string]) erro
 	}
 
 	// some common error checks
-	if slices.Contains([]reflect.Kind{reflect.String, reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Uint,
-		reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Bool, reflect.Float32, reflect.Float64}, fv.Kind()) || fv.Type() == reflect.TypeFor[time.Time]() {
+	if isScalarFieldType(fv.Type()) || fv.Type() == reflect.TypeFor[time.Time]() {
 		if len(values) == 0 {
 			return nil
 		}

@@ -4,9 +4,11 @@
 package opts
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 	"sync"
+	"time"
 
 	. "go.xyrillian.de/gg/option"
 )
@@ -98,7 +100,7 @@ func buildStructInfo(t reflect.Type) structInfo {
 				si.FlagSets[key] = flagSetInfo{Indexes: make(map[string][]int)}
 			}
 			if _, exists := si.FlagSets[key].Indexes[value]; exists {
-				panicf(`value %q for key %q is declared on multiple fields`, key, value)
+				panicf(`value %q for key %q is declared on multiple fields`, value, key)
 			}
 			si.FlagSets[key].Indexes[value] = field.Index
 			continue
@@ -110,6 +112,10 @@ func buildStructInfo(t reflect.Type) structInfo {
 		}
 		if _, exists := si.Options[key]; exists {
 			panicf(`key %q is declared on multiple fields`, key)
+		}
+		err := checkFieldTypeAllowed(field.Type)
+		if err != nil {
+			panic(err.Error())
 		}
 		si.Options[key] = optionInfo{
 			Index:      field.Index,
@@ -125,4 +131,46 @@ func buildStructInfo(t reflect.Type) structInfo {
 	}
 
 	return si
+}
+
+var (
+	timeType      = reflect.TypeFor[time.Time]()
+	anyOptionType = reflect.TypeFor[interface{ IsSome() bool }]()
+)
+
+// checkFieldTypeAllowed validates if the given type is allowed as a field within an option struct.
+func checkFieldTypeAllowed(t reflect.Type) error {
+	// a single level of pointer indirection is allowed
+	if t.Kind() == reflect.Pointer {
+		t = t.Elem()
+	}
+
+	switch {
+	case isScalarFieldType(t):
+		return nil
+	case t.Kind() == reflect.Struct:
+		if t == timeType || t.Implements(anyOptionType) {
+			return nil
+		}
+		return errors.New("structs other than time.Time and option.Option[T] are not supported")
+	case t.Kind() == reflect.Slice:
+		elementType := t.Elem()
+		if elementType == reflect.TypeFor[time.Time]() || isScalarFieldType(elementType) {
+			return nil
+		}
+		zero := reflect.New(elementType).Elem().Interface()
+		return fmt.Errorf("slices of type %T are not supported", zero)
+	case t.Kind() == reflect.Map:
+		if !isScalarFieldType(t.Key()) {
+			zero := reflect.New(t.Key()).Elem().Interface()
+			return fmt.Errorf("map keys of type %T are not supported", zero)
+		}
+		if !isScalarFieldType(t.Elem()) {
+			zero := reflect.New(t.Elem()).Elem().Interface()
+			return fmt.Errorf("map values of type %T are not supported", zero)
+		}
+		return nil
+	default:
+		return fmt.Errorf("fields of kind %s are not supported", t.Kind())
+	}
 }

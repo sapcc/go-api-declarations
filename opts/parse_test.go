@@ -226,27 +226,6 @@ func TestOptParserHappyPaths(t *testing.T) {
 		testOpts{WithDetails: true, WithSubresources: false, WithSubcapacities: true})
 }
 
-func checkParsingPanic(t *testing.T, panicMsg string, fn func()) {
-	t.Helper()
-	defer func() {
-		t.Helper()
-		r := recover()
-		if r == nil {
-			t.Errorf("expected panic %q, but function did not panic", panicMsg)
-			return
-		}
-		got, ok := r.(string)
-		if !ok {
-			t.Errorf("expected panic with string %q, but got non-string panic: %v", panicMsg, r)
-			return
-		}
-		if got != panicMsg {
-			t.Errorf("expected panic: %s, but got: %s", panicMsg, got)
-		}
-	}()
-	fn()
-}
-
 func checkParsingError(t *testing.T, query, errMsg string) {
 	t.Helper()
 	r := httptest.NewRequest(http.MethodGet, "/some/unimportant/path"+query, http.NoBody)
@@ -258,35 +237,8 @@ func TestOptParserErrors(t *testing.T) {
 	r := httptest.NewRequest(http.MethodGet, "/some/unimportant/path", http.NoBody)
 
 	// non-struct type parameter (panics)
-	checkParsingPanic(t, "options type is not a struct", func() {
+	expectPanic(t, "options type is not a struct", func() {
 		opts.ParseQueryString[int](r.URL.Query()) //nolint:errcheck // won't get to this part
-	})
-
-	// missing q-tag (panics)
-	type testNonOpts struct {
-		String string `yaml:"string"`
-	}
-	checkParsingPanic(t, `expected "String" to have a "q:"-tag`, func() {
-		opts.ParseQueryString[testNonOpts](r.URL.Query()) //nolint:errcheck // won't get to this part
-	})
-
-	// embedded struct with q-tag (panics)
-	type testEmbeddedQTagOpts struct {
-		EmbeddedOpts `q:"embedded"`
-	}
-	checkParsingPanic(t, `expected embedded struct "EmbeddedOpts" to have no "q:"-tag`, func() {
-		opts.ParseQueryString[testEmbeddedQTagOpts](r.URL.Query()) //nolint:errcheck // won't get to this part
-	})
-
-	// contradictory field declarations
-	type testFieldNameCollisionOpts struct {
-		Scope   string   `q:"scope"`
-		With    []string `q:"with"`
-		WithFoo bool     `q:"with,value:foo"`
-		WithBar bool     `q:"with,value:bar"`
-	}
-	checkParsingPanic(t, `key "with" cannot be declared as both a regular field and a value-discriminant field`, func() {
-		opts.ParseQueryString[testFieldNameCollisionOpts](r.URL.Query()) //nolint:errcheck // won't get to this part
 	})
 
 	// missing required parameter
@@ -327,18 +279,6 @@ func TestOptParserErrors(t *testing.T) {
 	// wrong time format
 	checkParsingError(t, "?time=2000-01-01", `invalid value for query parameter "time": cannot parse "2000-01-01" as RFC3339: parsing time "2000-01-01" as "2006-01-02T15:04:05Z07:00": cannot parse "" as "T"`)
 	r = httptest.NewRequest(http.MethodGet, "/some/unimportant/path?time=2000-01-01%2000:00", http.NoBody)
-	type testImpossibleTimeFormatOpts struct {
-		Time time.Time `q:"time,format:foo"`
-	}
-	checkParsingPanic(t, `unsupported time format "foo"; accepted: DateOnly, DateTime, RFC3339, RFC3339Nano, Unix`, func() {
-		opts.ParseQueryString[testImpossibleTimeFormatOpts](r.URL.Query()) //nolint:errcheck // won't get to this part
-	})
-	type testMissingTimeFormatOpts struct {
-		Time time.Time `q:"time"`
-	}
-	checkParsingPanic(t, `time format is missing for field "Time"`, func() {
-		opts.ParseQueryString[testMissingTimeFormatOpts](r.URL.Query()) //nolint:errcheck // won't get to this part
-	})
 
 	// wrong type: numbers
 	checkParsingError(t, "?int=foo", `invalid value for query parameter "int": strconv.ParseInt: parsing "foo": invalid syntax`)
