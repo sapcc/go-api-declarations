@@ -157,102 +157,24 @@ func TestBuildQueryStringHappyPaths(t *testing.T) {
 		"with=details&with=subcapacities")
 }
 
-func checkSerializingPanic(t *testing.T, panicMsg string, fn func()) {
-	t.Helper()
-	defer func() {
-		r := recover()
-		if r == nil {
-			t.Errorf("expected panic %q, but function did not panic", panicMsg)
-			return
-		}
-		got, ok := r.(string)
-		if !ok {
-			t.Errorf("expected panic with string %q, but got non-string panic: %v", panicMsg, r)
-			return
-		}
-		if got != panicMsg {
-			t.Errorf("expected panic: %s, but got: %s", panicMsg, got)
-		}
-	}()
-	fn()
+func expectSerializingPanic(t *testing.T, data any, panicMsg string) {
+	expectPanic(t, panicMsg, func() {
+		t.Helper()
+		_, _ = opts.BuildQueryString(data) //nolint:errcheck // panics before returning
+	})
 }
 
 func TestBuildQueryStringErrors(t *testing.T) {
 	// nil-pointer input (panics)
-	checkSerializingPanic(t, "opts is a nil pointer", func() {
-		opts.BuildQueryString((*testOpts)(nil)) //nolint:errcheck // won't get to this part
-	})
+	expectSerializingPanic(t, (*testOpts)(nil), "opts is a nil pointer")
 
 	// non-struct input (panics)
-	checkSerializingPanic(t, "options type is not a struct", func() {
-		opts.BuildQueryString(42) //nolint:errcheck // won't get to this part
-	})
-
-	// missing q-tag (panics)
-	type testNonOpts struct {
-		String string `yaml:"string"`
-	}
-	checkSerializingPanic(t, `expected "String" to have a "q:"-tag`, func() {
-		opts.BuildQueryString(testNonOpts{}) //nolint:errcheck // won't get to this part
-	})
-
-	// embedded struct with q-tag (panics)
-	type testEmbeddedQTagOpts struct {
-		EmbeddedOpts `q:"embedded"`
-	}
-	checkSerializingPanic(t, `expected embedded struct "EmbeddedOpts" to have no "q:"-tag`, func() {
-		opts.BuildQueryString(testEmbeddedQTagOpts{}) //nolint:errcheck // won't get to this part
-	})
-
-	// contradictory field declarations
-	type testFieldNameCollisionOpts struct {
-		Scope   string   `q:"scope"`
-		With    []string `q:"with"`
-		WithFoo bool     `q:"with,value:foo"`
-		WithBar bool     `q:"with,value:bar"`
-	}
-	checkParsingPanic(t, `key "with" cannot be declared as both a regular field and a value-discriminant field`, func() {
-		opts.BuildQueryString(testFieldNameCollisionOpts{}) //nolint:errcheck // won't get to this part
-	})
-	type testFieldNameCollisionOptsFlipped struct {
-		Scope   string   `q:"scope"`
-		WithFoo bool     `q:"with,value:foo"`
-		WithBar bool     `q:"with,value:bar"`
-		With    []string `q:"with"`
-	}
-	checkParsingPanic(t, `key "with" cannot be declared as both a regular field and a value-discriminant field`, func() {
-		opts.BuildQueryString(testFieldNameCollisionOptsFlipped{}) //nolint:errcheck // won't get to this part
-	})
-
-	// unknown struct parameter (panics)
-	type testNested struct {
-		String string `q:"string"`
-	}
-	type testNested2 struct {
-		Nested testNested `q:"nested"`
-	}
-	checkSerializingPanic(t, "structs other than time.Time and option.Option[T] are not supported", func() {
-		opts.BuildQueryString(testNested2{}) //nolint:errcheck // won't get to this part
-	})
-
-	// unknown time format (panics)
-	type testBadTimeFormatOpts struct {
-		Time time.Time `q:"time,format:foo"`
-	}
-	checkSerializingPanic(t, `unsupported time format "foo"; accepted: DateOnly, DateTime, RFC3339, RFC3339Nano, Unix`, func() {
-		opts.BuildQueryString(testBadTimeFormatOpts{}) //nolint:errcheck // won't get to this part
-	})
-	type testMissingTimeFormatOpts struct {
-		Time time.Time `q:"time"`
-	}
-	checkSerializingPanic(t, `time format is missing for field "Time"`, func() {
-		opts.BuildQueryString(testMissingTimeFormatOpts{}) //nolint:errcheck // won't get to this part
-	})
+	expectSerializingPanic(t, 42, "options type is not a struct")
 
 	//  missing required parameter
 	type requiredOpts struct {
 		Name string `q:"name,required"`
 	}
 	_, err := opts.BuildQueryString(requiredOpts{})
-	th.AssertErr(t, "required query parameter [Name] not set", err)
+	th.AssertErr(t, `required query parameter "name" not set`, err)
 }
