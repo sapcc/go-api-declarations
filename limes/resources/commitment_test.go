@@ -4,6 +4,7 @@
 package limesresources
 
 import (
+	"encoding/json"
 	"reflect"
 	"testing"
 	"time"
@@ -65,5 +66,28 @@ func TestSerializeCommitmentDuration(t *testing.T) {
 				t.Errorf("expected canonical representation of %q to be %q, but got %q", input, expected, actual)
 			}
 		}
+	}
+}
+
+func TestCommitmentDurationAsMapKey(t *testing.T) {
+	original := map[CommitmentDuration]uint64{
+		{Years: 1}:            10,
+		{Years: 2}:            20,
+		{Years: 1, Months: 6}: 15,
+	}
+
+	buf, err := json.Marshal(original)
+	if err != nil {
+		t.Fatalf("could not marshal map with CommitmentDuration keys: %s", err.Error())
+	}
+
+	var decoded map[CommitmentDuration]uint64
+	err = json.Unmarshal(buf, &decoded)
+	if err != nil {
+		t.Fatalf("could not unmarshal map with CommitmentDuration keys: %s", err.Error())
+	}
+
+	if !reflect.DeepEqual(original, decoded) {
+		t.Errorf("expected decoded map to equal original\n  original: %v\n  decoded:  %v", original, decoded)
 	}
 }
