@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/sapcc/go-api-declarations/limes"
+	"github.com/sapcc/go-api-declarations/liquid"
 )
 
 func TestParseQuotaOverrides(t *testing.T) {
@@ -20,7 +21,9 @@ func TestParseQuotaOverrides(t *testing.T) {
 		case "unittest/capacity":
 			return limes.UnitBytes, nil
 		case "unittest/things":
-			return limes.UnitNone, nil
+			// For full realism, this must return UnitPiece instead of UnitNone.
+			// Under productive use, getUnit will take metadata from the Limes DB, where UnitNone is normalized into UnitPiece.
+			return liquid.UnitPiece, nil
 		default:
 			return limes.UnitNone, fmt.Errorf("%s/%s is not a valid resource", serviceType, resourceName)
 		}
