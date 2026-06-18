@@ -39,6 +39,8 @@ func TestParseUnit(t *testing.T) {
 	}
 
 	test("", UnitNone)
+	test("piece", UnitPiece)
+	test("1000 piece", mustMultiply(UnitPiece, 1000))
 	test("KiB", UnitKibibytes)
 	test("1000 B", mustMultiply(UnitBytes, 1000))
 	test("1024 B", UnitKibibytes)
@@ -63,6 +65,8 @@ func TestSerializeUnit(t *testing.T) {
 	}
 
 	test(UnitNone, "")
+	test(UnitPiece, "piece")
+	test(mustMultiply(UnitPiece, 1000), "1000 piece")
 	test(UnitKibibytes, "KiB")
 	test(mustMultiply(UnitBytes, 1000), "1000 B")
 	test(mustMultiply(UnitBytes, 1024), "KiB")
@@ -75,13 +79,11 @@ func TestUnitMultiplyBy(t *testing.T) {
 	// This test checks some interesting corner cases.
 
 	// multiply by 1 produces exactly equal instances
-	u, err := UnitBytes.MultiplyBy(1)
-	th.AssertNoErr(t, err)
-	th.CheckDeepEquals(t, UnitBytes, u)
-
-	u, err = UnitGibibytes.MultiplyBy(1)
-	th.AssertNoErr(t, err)
-	th.CheckDeepEquals(t, UnitGibibytes, u)
+	for _, base := range []Unit{UnitPiece, UnitBytes, UnitGibibytes} {
+		u, err := base.MultiplyBy(1)
+		th.AssertNoErr(t, err)
+		th.CheckDeepEquals(t, base, u)
+	}
 }
 
 func mustMultiply(unit Unit, factor uint64) Unit {
