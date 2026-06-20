@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"testing"
 
+	"go.xyrillian.de/gg/assert"
 	. "go.xyrillian.de/gg/option"
 
 	th "github.com/sapcc/go-api-declarations/internal/testhelper"
@@ -31,7 +32,7 @@ func TestCloneServiceCapacityRequest(t *testing.T) {
 	}
 
 	clonedRequest := request.Clone()
-	th.CheckDeepEquals(t, request, clonedRequest)
+	assert.Equal(t, clonedRequest, request)
 	th.CheckFullySeparate(t, request, clonedRequest)
 }
 
@@ -65,6 +66,6 @@ func TestCloneServiceCapacityReport(t *testing.T) {
 	}
 
 	clonedReport := report.Clone()
-	th.CheckDeepEquals(t, report, clonedReport)
+	assert.Equal(t, clonedReport, report)
 	th.CheckFullySeparate(t, report, clonedReport)
 }

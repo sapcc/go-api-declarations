@@ -6,7 +6,7 @@ package units
 import (
 	"testing"
 
-	th "github.com/sapcc/go-api-declarations/internal/testhelper"
+	"go.xyrillian.de/gg/assert"
 )
 
 func TestParseInUnit(t *testing.T) {
@@ -14,25 +14,25 @@ func TestParseInUnit(t *testing.T) {
 	// Since ParseInUnit() calls ConvertTo(), this also provides coverage for ConvertTo().
 
 	value, err := ParseInUnit(UnitMebibytes, "10 MiB")
-	th.AssertNoErr(t, err)
-	th.CheckEquals(t, 10, value)
+	assert.ErrEqual(t, err, nil)
+	assert.Equal(t, value, 10)
 
 	value, err = ParseInUnit(UnitMebibytes, "10 GiB")
-	th.AssertNoErr(t, err)
-	th.CheckEquals(t, 10240, value)
+	assert.ErrEqual(t, err, nil)
+	assert.Equal(t, value, 10240)
 
 	_, err = ParseInUnit(UnitMebibytes, "10 KiB")
-	th.AssertErr(t, `value "10 KiB" cannot be represented as integer number of MiB`, err)
+	assert.ErrEqual(t, err, `value "10 KiB" cannot be represented as integer number of MiB`)
 
 	_, err = ParseInUnit(UnitMebibytes, "10")
-	th.AssertErr(t, `cannot convert value "10" to MiB because units are incompatible`, err)
+	assert.ErrEqual(t, err, `cannot convert value "10" to MiB because units are incompatible`)
 
 	value, err = ParseInUnit(UnitNone, "42")
-	th.AssertNoErr(t, err)
-	th.CheckEquals(t, 42, value)
+	assert.ErrEqual(t, err, nil)
+	assert.Equal(t, value, 42)
 
 	_, err = ParseInUnit(UnitNone, "42 MiB")
-	th.AssertErr(t, `cannot convert value "42 MiB" to <count> because units are incompatible`, err)
+	assert.ErrEqual(t, err, `cannot convert value "42 MiB" to <count> because units are incompatible`)
 }
 
 func TestValueWithUnitToString(t *testing.T) {
@@ -42,25 +42,25 @@ func TestValueWithUnitToString(t *testing.T) {
 		Value: 128,
 		Unit:  UnitKibibytes,
 	}
-	th.CheckEquals(t, "128 KiB", v.String())
+	assert.Equal(t, v.String(), "128 KiB")
 
 	v = LimesV1ValueWithUnit{
 		Value: 128,
 		Unit:  mustMultiply(UnitKibibytes, 32),
 	}
-	th.CheckEquals(t, "4 MiB", v.String()) // uses nice formatting, i.e. neither "128 x 32 KiB" nor "4096 KiB"
+	assert.Equal(t, v.String(), "4 MiB") // uses nice formatting, i.e. neither "128 x 32 KiB" nor "4096 KiB"
 
 	v = LimesV1ValueWithUnit{
 		// this value is equal to 2^75 bytes and overflows type Amount
 		Value: 32768,
 		Unit:  UnitExbibytes,
 	}
-	th.CheckEquals(t, "32768 EiB", v.String()) // printed via fallback logic
+	assert.Equal(t, v.String(), "32768 EiB") // printed via fallback logic
 
 	v = LimesV1ValueWithUnit{
 		// same value, but this time the fallback printing logic is more obvious
 		Value: 16384,
 		Unit:  mustMultiply(UnitExbibytes, 2),
 	}
-	th.CheckEquals(t, "16384 x 2 EiB", v.String())
+	assert.Equal(t, v.String(), "16384 x 2 EiB")
 }

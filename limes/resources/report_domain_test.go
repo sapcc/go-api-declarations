@@ -6,6 +6,8 @@ package limesresources
 import (
 	"testing"
 
+	"go.xyrillian.de/gg/assert"
+
 	th "github.com/sapcc/go-api-declarations/internal/testhelper"
 	"github.com/sapcc/go-api-declarations/limes"
 )
@@ -93,8 +95,8 @@ func TestDomainServicesMarshal(t *testing.T) {
 func TestDomainServicesUnmarshal(t *testing.T) {
 	actual := &DomainServiceReports{}
 	err := actual.UnmarshalJSON([]byte(domainServicesMockJSON))
-	th.AssertNoErr(t, err)
-	th.CheckDeepEquals(t, domainMockServices, actual)
+	assert.ErrEqual(t, err, nil)
+	assert.Equal(t, actual, domainMockServices)
 }
 
 func TestDomainResourcesMarshal(t *testing.T) {
@@ -104,6 +106,6 @@ func TestDomainResourcesMarshal(t *testing.T) {
 func TestDomainResourcesUnmarshal(t *testing.T) {
 	actual := &DomainResourceReports{}
 	err := actual.UnmarshalJSON([]byte(domainResourcesMockJSON))
-	th.AssertNoErr(t, err)
-	th.CheckDeepEquals(t, domainMockResources, actual)
+	assert.ErrEqual(t, err, nil)
+	assert.Equal(t, actual, domainMockResources)
 }

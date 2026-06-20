@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"go.xyrillian.de/gg/assert"
+
 	th "github.com/sapcc/go-api-declarations/internal/testhelper"
 	"github.com/sapcc/go-api-declarations/limes"
 )
@@ -135,8 +137,8 @@ func TestProjectServicesMarshall(t *testing.T) {
 func TestProjectServicesUnmarshall(t *testing.T) {
 	actual := &ProjectServiceReports{}
 	err := actual.UnmarshalJSON([]byte(projectServicesMockJSON))
-	th.AssertNoErr(t, err)
-	th.CheckDeepEquals(t, projectMockServices, actual)
+	assert.ErrEqual(t, err, nil)
+	assert.Equal(t, actual, projectMockServices)
 }
 
 func TestProjectResourcesMarshall(t *testing.T) {
@@ -146,8 +148,8 @@ func TestProjectResourcesMarshall(t *testing.T) {
 func TestProjectResourcesUnmarshall(t *testing.T) {
 	actual := &ProjectResourceReports{}
 	err := actual.UnmarshalJSON([]byte(projectResourcesMockJSON))
-	th.AssertNoErr(t, err)
-	th.CheckDeepEquals(t, projectMockResources, actual)
+	assert.ErrEqual(t, err, nil)
+	assert.Equal(t, actual, projectMockResources)
 }
 
 func p2time(timestamp int64) *limes.UnixEncodedTime {

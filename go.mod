@@ -2,4 +2,4 @@ module github.com/sapcc/go-api-declarations
 
 go 1.26
 
-require go.xyrillian.de/gg v1.9.1
+require go.xyrillian.de/gg v1.10.0

@@ -6,6 +6,8 @@ package limesresources
 import (
 	"testing"
 
+	"go.xyrillian.de/gg/assert"
+
 	th "github.com/sapcc/go-api-declarations/internal/testhelper"
 	"github.com/sapcc/go-api-declarations/limes"
 )
@@ -162,8 +164,8 @@ func TestClusterServicesMarshal(t *testing.T) {
 func TestClusterServicesUnmarshal(t *testing.T) {
 	actual := &ClusterServiceReports{}
 	err := actual.UnmarshalJSON([]byte(clusterServicesMockJSON))
-	th.AssertNoErr(t, err)
-	th.CheckDeepEquals(t, clusterMockServices, actual)
+	assert.ErrEqual(t, err, nil)
+	assert.Equal(t, actual, clusterMockServices)
 }
 
 func TestClusterResourcesMarshal(t *testing.T) {
@@ -173,6 +175,6 @@ func TestClusterResourcesMarshal(t *testing.T) {
 func TestClusterResourcesUnmarshal(t *testing.T) {
 	actual := &ClusterResourceReports{}
 	err := actual.UnmarshalJSON([]byte(clusterResourcesMockJSON))
-	th.AssertNoErr(t, err)
-	th.CheckDeepEquals(t, clusterMockResources, actual)
+	assert.ErrEqual(t, err, nil)
+	assert.Equal(t, actual, clusterMockResources)
 }

@@ -4,11 +4,12 @@
 package units
 
 import (
+	"database/sql/driver"
 	"encoding/json"
 	"fmt"
 	"testing"
 
-	th "github.com/sapcc/go-api-declarations/internal/testhelper"
+	"go.xyrillian.de/gg/assert"
 )
 
 func TestParseUnit(t *testing.T) {
@@ -19,22 +20,22 @@ func TestParseUnit(t *testing.T) {
 			// test parsing from SQL string
 			var u1 Unit
 			err := u1.Scan(input)
-			th.AssertNoErr(t, err)
-			th.CheckDeepEquals(t, expected, u1)
+			assert.ErrEqual(t, err, nil)
+			assert.Equal(t, u1, expected)
 
 			// test parsing from SQL bytestring
 			var u2 Unit
 			err = u2.Scan([]byte(input))
-			th.AssertNoErr(t, err)
-			th.CheckDeepEquals(t, expected, u2)
+			assert.ErrEqual(t, err, nil)
+			assert.Equal(t, u2, expected)
 
 			// test parsing from JSON string
 			buf, err := json.Marshal(input)
-			th.AssertNoErr(t, err)
+			assert.ErrEqual(t, err, nil)
 			var u3 Unit
 			err = json.Unmarshal(buf, &u3)
-			th.AssertNoErr(t, err)
-			th.CheckDeepEquals(t, expected, u3)
+			assert.ErrEqual(t, err, nil)
+			assert.Equal(t, u3, expected)
 		})
 	}
 
@@ -50,17 +51,17 @@ func TestSerializeUnit(t *testing.T) {
 	test := func(unit Unit, expected string) {
 		t.Run(fmt.Sprintf("%#v", unit), func(t *testing.T) {
 			// test serialization through fmt.Stringer
-			th.CheckDeepEquals(t, expected, unit.String())
+			assert.Equal(t, unit.String(), expected)
 
 			// test serialization as SQL string
 			value, err := unit.Value()
-			th.AssertNoErr(t, err)
-			th.CheckDeepEquals(t, expected, value)
+			assert.ErrEqual(t, err, nil)
+			assert.Equal(t, value, driver.Value(expected))
 
 			// test serialization as JSON string
 			buf, err := json.Marshal(unit)
-			th.AssertNoErr(t, err)
-			th.CheckDeepEquals(t, fmt.Sprintf("%q", expected), string(buf))
+			assert.ErrEqual(t, err, nil)
+			assert.Equal(t, string(buf), fmt.Sprintf("%q", expected))
 		})
 	}
 
@@ -81,8 +82,8 @@ func TestUnitMultiplyBy(t *testing.T) {
 	// multiply by 1 produces exactly equal instances
 	for _, base := range []Unit{UnitPiece, UnitBytes, UnitGibibytes} {
 		u, err := base.MultiplyBy(1)
-		th.AssertNoErr(t, err)
-		th.CheckDeepEquals(t, base, u)
+		assert.ErrEqual(t, err, nil)
+		assert.Equal(t, u, base)
 	}
 }
 
