@@ -6,6 +6,8 @@ package limesrates
 import (
 	"testing"
 
+	"go.xyrillian.de/gg/assert"
+
 	th "github.com/sapcc/go-api-declarations/internal/testhelper"
 	"github.com/sapcc/go-api-declarations/limes"
 )
@@ -49,6 +51,6 @@ func TestClusterServicesOnlyRatesMarshal(t *testing.T) {
 func TestClusterServicesOnlyRatesUnmarshal(t *testing.T) {
 	actual := &ClusterServiceReports{}
 	err := actual.UnmarshalJSON([]byte(clusterServicesOnlyRatesMockJSON))
-	th.AssertNoErr(t, err)
-	th.CheckDeepEquals(t, clusterServicesOnlyRates, actual)
+	assert.ErrEqual(t, err, nil)
+	assert.Equal(t, actual, clusterServicesOnlyRates)
 }

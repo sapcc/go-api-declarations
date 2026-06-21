@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
+	"go.xyrillian.de/gg/assert"
 	. "go.xyrillian.de/gg/option"
 
-	th "github.com/sapcc/go-api-declarations/internal/testhelper"
 	"github.com/sapcc/go-api-declarations/opts"
 )
 
@@ -26,7 +26,7 @@ func checkSerializingHappyPath(t *testing.T, variable string, input any, expecte
 		if err != nil {
 			t.Fatal(variable + ": " + err.Error())
 		}
-		th.CheckEquals(t, expectedQuery, v.Encode())
+		assert.Equal(t, v.Encode(), expectedQuery)
 	})
 }
 
@@ -176,5 +176,5 @@ func TestBuildQueryStringErrors(t *testing.T) {
 		Name string `q:"name,required"`
 	}
 	_, err := opts.BuildQueryString(requiredOpts{})
-	th.AssertErr(t, `required query parameter "name" not set`, err)
+	assert.ErrEqual(t, err, `required query parameter "name" not set`)
 }

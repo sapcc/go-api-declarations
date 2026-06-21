@@ -13,9 +13,9 @@ import (
 	"testing"
 	"time"
 
+	"go.xyrillian.de/gg/assert"
 	. "go.xyrillian.de/gg/option"
 
-	th "github.com/sapcc/go-api-declarations/internal/testhelper"
 	"github.com/sapcc/go-api-declarations/opts"
 )
 
@@ -104,7 +104,7 @@ func checkParsingHappyPath(t *testing.T, variable, query string, result testOpts
 	if err != nil {
 		t.Fatal(variable + ": " + err.Error())
 	}
-	th.CheckDeepEquals(t, result, to)
+	assert.Equal(t, to, result)
 }
 
 func TestOptParserHappyPaths(t *testing.T) {
@@ -246,7 +246,7 @@ func checkParsingError(t *testing.T, query, errMsg string) {
 	t.Helper()
 	r := httptest.NewRequest(http.MethodGet, "/some/unimportant/path"+query, http.NoBody)
 	_, resultingError := opts.ParseQueryString[testOpts](r.URL.Query())
-	th.AssertErr(t, errMsg, resultingError)
+	assert.ErrEqual(t, resultingError, errMsg)
 }
 
 func TestOptParserErrors(t *testing.T) {
@@ -265,12 +265,12 @@ func TestOptParserErrors(t *testing.T) {
 		String string `q:"string,required"`
 	}
 	_, resultingError := opts.ParseQueryString[testStringRequiredOpts](r.URL.Query())
-	th.AssertErr(t, `missing value for query parameter "string"`, resultingError)
+	assert.ErrEqual(t, resultingError, `missing value for query parameter "string"`)
 	type testStringSliceRequiredOpts struct {
 		StringSlice []string `q:"string_slice,required"`
 	}
 	_, resultingError = opts.ParseQueryString[testStringSliceRequiredOpts](r.URL.Query())
-	th.AssertErr(t, `missing value for query parameter "string_slice"`, resultingError)
+	assert.ErrEqual(t, resultingError, `missing value for query parameter "string_slice"`)
 
 	// unknown parameter
 	checkParsingError(t, "?someRandomParam=foo", `unknown query parameter "someRandomParam"`)

@@ -8,30 +8,20 @@ import (
 	"testing"
 	"time"
 
+	"go.xyrillian.de/gg/assert"
 	. "go.xyrillian.de/gg/option"
+	"go.xyrillian.de/gg/testcapture"
 
 	"github.com/sapcc/go-api-declarations/opts"
 )
 
 func expectPanic(t *testing.T, panicMsg string, fn func()) {
 	t.Helper()
-	defer func() {
-		t.Helper()
-		r := recover()
-		if r == nil {
-			t.Errorf("expected panic %q, but function did not panic", panicMsg)
-			return
-		}
-		got, ok := r.(string)
-		if !ok {
-			t.Errorf("expected panic with string %q, but got non-string panic: %v", panicMsg, r)
-			return
-		}
-		if got != panicMsg {
-			t.Errorf("expected panic: %s, but got: %s", panicMsg, got)
-		}
-	}()
-	fn()
+	result := testcapture.Capture(t.Context(), t.Name(), func(t assert.TestingTB) { fn() })
+	assert.Equal(t, result, testcapture.Result{
+		Outcome: testcapture.OutcomePanicked,
+		Panic:   panicMsg,
+	})
 }
 
 func expectAnalyzePanic[T any](t *testing.T, panicMsg string) {

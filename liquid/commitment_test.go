@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"go.xyrillian.de/gg/assert"
 	. "go.xyrillian.de/gg/option"
 
 	th "github.com/sapcc/go-api-declarations/internal/testhelper"
@@ -50,7 +51,7 @@ func TestCloneCommitmentChangeRequest(t *testing.T) {
 	}
 
 	clonedRequest := request.Clone()
-	th.CheckDeepEquals(t, request, clonedRequest)
+	assert.Equal(t, clonedRequest, request)
 	th.CheckFullySeparate(t, request, clonedRequest)
 }
 
@@ -62,7 +63,7 @@ func TestCloneCommitmentChangeResponse(t *testing.T) {
 	}
 
 	clonedResponse := response.Clone()
-	th.CheckDeepEquals(t, response, clonedResponse)
+	assert.Equal(t, clonedResponse, response)
 	th.CheckFullySeparate(t, response, clonedResponse)
 }
 
@@ -128,7 +129,7 @@ func TestCommitmentChangeRequestRequiresConfirmation(t *testing.T) {
 			},
 		},
 	})
-	th.CheckDeepEquals(t, c.RequiresConfirmation(), false)
+	assert.Equal(t, c.RequiresConfirmation(), false)
 
 	// ...but creation of an immediately-confirmed commitment DOES require confirmation
 	c = makeRequest(map[ProjectUUID]ProjectCommitmentChangeset{
@@ -149,7 +150,7 @@ func TestCommitmentChangeRequestRequiresConfirmation(t *testing.T) {
 			},
 		},
 	})
-	th.CheckDeepEquals(t, c.RequiresConfirmation(), true)
+	assert.Equal(t, c.RequiresConfirmation(), true)
 
 	// moving a commitment from "planned" to "pending" on its ConfirmBy time DOES NOT require confirmation...
 	c = makeRequest(map[ProjectUUID]ProjectCommitmentChangeset{
@@ -172,7 +173,7 @@ func TestCommitmentChangeRequestRequiresConfirmation(t *testing.T) {
 			},
 		},
 	})
-	th.CheckDeepEquals(t, c.RequiresConfirmation(), false)
+	assert.Equal(t, c.RequiresConfirmation(), false)
 
 	// ...but moving from either "planned" or "pending" to "confirmed" DOES require confirmation
 	for _, oldStatus := range []CommitmentStatus{CommitmentStatusPlanned, CommitmentStatusPending} {
@@ -195,7 +196,7 @@ func TestCommitmentChangeRequestRequiresConfirmation(t *testing.T) {
 			},
 		})
 		t.Logf("checking confirmation from status %q", oldStatus)
-		th.CheckDeepEquals(t, c.RequiresConfirmation(), true)
+		assert.Equal(t, c.RequiresConfirmation(), true)
 	}
 
 	// creating a commitment in "guaranteed" DOES require confirmation...
@@ -218,7 +219,7 @@ func TestCommitmentChangeRequestRequiresConfirmation(t *testing.T) {
 			},
 		},
 	})
-	th.CheckDeepEquals(t, c.RequiresConfirmation(), true)
+	assert.Equal(t, c.RequiresConfirmation(), true)
 
 	// ...but then moving it into "confirmed" later DOES NOT require additional confirmation
 	c = makeRequest(map[ProjectUUID]ProjectCommitmentChangeset{
@@ -241,7 +242,7 @@ func TestCommitmentChangeRequestRequiresConfirmation(t *testing.T) {
 			},
 		},
 	})
-	th.CheckDeepEquals(t, c.RequiresConfirmation(), false)
+	assert.Equal(t, c.RequiresConfirmation(), false)
 
 	// splitting a commitment DOES NOT require confirmation, regardless of status
 	for _, status := range allAliveStatuses {
@@ -277,7 +278,7 @@ func TestCommitmentChangeRequestRequiresConfirmation(t *testing.T) {
 			},
 		})
 		t.Logf("checking split of status %q", status)
-		th.CheckDeepEquals(t, c.RequiresConfirmation(), false)
+		assert.Equal(t, c.RequiresConfirmation(), false)
 	}
 
 	// moving a commitment from one project to another requires confirmation only in status "guaranteed" or "confirmed"
@@ -319,7 +320,7 @@ func TestCommitmentChangeRequestRequiresConfirmation(t *testing.T) {
 			},
 		})
 		t.Logf("checking move in status %q", status)
-		th.CheckDeepEquals(t, c.RequiresConfirmation(), status == CommitmentStatusGuaranteed || status == CommitmentStatusConfirmed)
+		assert.Equal(t, c.RequiresConfirmation(), status == CommitmentStatusGuaranteed || status == CommitmentStatusConfirmed)
 	}
 
 	// converting a commitment between compatible resources requires confirmation only in status "guaranteed" or "confirmed"
@@ -358,7 +359,7 @@ func TestCommitmentChangeRequestRequiresConfirmation(t *testing.T) {
 			},
 		})
 		t.Logf("checking conversion in status %q", status)
-		th.CheckDeepEquals(t, c.RequiresConfirmation(), status == CommitmentStatusGuaranteed || status == CommitmentStatusConfirmed)
+		assert.Equal(t, c.RequiresConfirmation(), status == CommitmentStatusGuaranteed || status == CommitmentStatusConfirmed)
 	}
 
 	// transitioning into status "expired" is the only type of change to the relevant totals numbers
@@ -384,7 +385,7 @@ func TestCommitmentChangeRequestRequiresConfirmation(t *testing.T) {
 			},
 		})
 		t.Logf("checking expiry in status %q", status)
-		th.CheckDeepEquals(t, c.RequiresConfirmation(), false)
+		assert.Equal(t, c.RequiresConfirmation(), false)
 	}
 
 	// same for hard deletions
@@ -408,7 +409,7 @@ func TestCommitmentChangeRequestRequiresConfirmation(t *testing.T) {
 			},
 		})
 		t.Logf("checking deletion in status %q", status)
-		th.CheckDeepEquals(t, c.RequiresConfirmation(), false)
+		assert.Equal(t, c.RequiresConfirmation(), false)
 	}
 
 	// change of expiration date requires confirmation when already in StatusConfirmed or StatusGuaranteed
@@ -434,6 +435,6 @@ func TestCommitmentChangeRequestRequiresConfirmation(t *testing.T) {
 			},
 		})
 		t.Logf("checking expiresAt extension in status %q", status)
-		th.CheckDeepEquals(t, c.RequiresConfirmation(), status == CommitmentStatusConfirmed || status == CommitmentStatusGuaranteed)
+		assert.Equal(t, c.RequiresConfirmation(), status == CommitmentStatusConfirmed || status == CommitmentStatusGuaranteed)
 	}
 }

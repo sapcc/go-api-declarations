@@ -6,6 +6,7 @@ package liquid
 import (
 	"testing"
 
+	"go.xyrillian.de/gg/assert"
 	. "go.xyrillian.de/gg/option"
 
 	th "github.com/sapcc/go-api-declarations/internal/testhelper"
@@ -34,6 +35,6 @@ func TestCloneServiceQuotaRequest(t *testing.T) {
 	}
 
 	clonedRequest := request.Clone()
-	th.CheckDeepEquals(t, request, clonedRequest)
+	assert.Equal(t, clonedRequest, request)
 	th.CheckFullySeparate(t, request, clonedRequest)
 }

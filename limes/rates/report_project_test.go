@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"go.xyrillian.de/gg/assert"
+
 	th "github.com/sapcc/go-api-declarations/internal/testhelper"
 	"github.com/sapcc/go-api-declarations/limes"
 )
@@ -138,8 +140,8 @@ func TestProjectServicesRateLimitMarshall(t *testing.T) {
 func TestProjectServicesRateLimitUnmarshall(t *testing.T) {
 	actual := &ProjectServiceReports{}
 	err := actual.UnmarshalJSON([]byte(projectServicesRateLimitMockJSON))
-	th.AssertNoErr(t, err)
-	th.CheckDeepEquals(t, projectMockServicesRateLimit, actual)
+	assert.ErrEqual(t, err, nil)
+	assert.Equal(t, actual, projectMockServicesRateLimit)
 }
 
 func TestProjectServicesRateLimitDeviatingFromDefaultsMarshall(t *testing.T) {
@@ -149,8 +151,8 @@ func TestProjectServicesRateLimitDeviatingFromDefaultsMarshall(t *testing.T) {
 func TestProjectServicesRateLimitDeviatingFromDefaultsUnmarshall(t *testing.T) {
 	actual := &ProjectServiceReports{}
 	err := actual.UnmarshalJSON([]byte(projectServicesRateLimitDeviatingFromDefaultsMockJSON))
-	th.AssertNoErr(t, err)
-	th.CheckDeepEquals(t, projectMockServicesRateLimitDeviatingFromDefaults, actual)
+	assert.ErrEqual(t, err, nil)
+	assert.Equal(t, actual, projectMockServicesRateLimitDeviatingFromDefaults)
 }
 
 func p2time(timestamp int64) *limes.UnixEncodedTime {

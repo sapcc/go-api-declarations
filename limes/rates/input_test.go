@@ -6,6 +6,8 @@ package limesrates
 import (
 	"testing"
 
+	"go.xyrillian.de/gg/assert"
+
 	th "github.com/sapcc/go-api-declarations/internal/testhelper"
 )
 
@@ -43,6 +45,6 @@ func TestQuotaRateLimitMarshal(t *testing.T) {
 func TestRateLimitRequestUnmarshal(t *testing.T) {
 	var actual RateRequest
 	err := actual.UnmarshalJSON([]byte(rateLimitJSON))
-	th.AssertNoErr(t, err)
-	th.CheckDeepEquals(t, rateLimits, actual)
+	assert.ErrEqual(t, err, nil)
+	assert.Equal(t, actual, rateLimits)
 }

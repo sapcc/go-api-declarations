@@ -9,6 +9,7 @@ import (
 
 	th "github.com/sapcc/go-api-declarations/internal/testhelper"
 
+	"go.xyrillian.de/gg/assert"
 	. "go.xyrillian.de/gg/option"
 )
 
@@ -63,6 +64,6 @@ func TestCloneServiceInfo(t *testing.T) {
 	}
 
 	clonedInfo := info.Clone()
-	th.CheckDeepEquals(t, info, clonedInfo)
+	assert.Equal(t, clonedInfo, info)
 	th.CheckFullySeparate(t, info, clonedInfo)
 }
