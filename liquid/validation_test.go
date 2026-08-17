@@ -27,34 +27,34 @@ var serviceInfo = ServiceInfo{
 	Resources: map[ResourceName]ResourceInfo{
 		"foo": {
 			Category:    Some(CategoryName("cat1")),
-			Unit:        UnitNone,
+			Unit:        UnitPiece,
 			Topology:    AZAwareTopology,
 			HasCapacity: true,
 			HasQuota:    true,
 		},
 		"bar": {
 			Category:    Some(CategoryName("cat1")),
-			Unit:        UnitNone,
+			Unit:        UnitPiece,
 			Topology:    FlatTopology,
 			HasCapacity: true,
 			HasQuota:    true,
 		},
 		"baz": {
 			Category:    Some(CategoryName("cat2")),
-			Unit:        UnitNone,
+			Unit:        UnitPiece,
 			Topology:    FlatTopology,
 			HasCapacity: false,
 			HasQuota:    false,
 		},
 		"qux": {
 			Category:    Some(CategoryName("cat2")),
-			Unit:        UnitNone,
+			Unit:        UnitPiece,
 			Topology:    AZSeparatedTopology,
 			HasCapacity: true,
 			HasQuota:    true,
 		},
 		"quux": {
-			Unit:        UnitNone,
+			Unit:        UnitPiece,
 			Topology:    AZSeparatedTopology,
 			HasCapacity: true,
 			HasQuota:    true,
@@ -63,29 +63,29 @@ var serviceInfo = ServiceInfo{
 	Rates: map[RateName]RateInfo{
 		"corge": {
 			Category: Some(CategoryName("cat1")),
-			Unit:     UnitNone,
+			Unit:     UnitPiece,
 			HasUsage: true,
 			Topology: AZAwareTopology,
 		},
 		"grault": {
 			Category: Some(CategoryName("cat1")),
-			Unit:     UnitNone,
+			Unit:     UnitPiece,
 			HasUsage: true,
 			Topology: FlatTopology,
 		},
 		"garply": {
 			Category: Some(CategoryName("cat2")),
-			Unit:     UnitNone,
+			Unit:     UnitPiece,
 			HasUsage: true,
 			Topology: AZAwareTopology,
 		},
 		"waldo": {
-			Unit:     UnitNone,
+			Unit:     UnitPiece,
 			HasUsage: true,
 			Topology: AZAwareTopology,
 		},
 		"object_creations": {
-			Unit:     UnitNone,
+			Unit:     UnitPiece,
 			HasUsage: false,
 			Topology: AZAwareTopology,
 		},
@@ -121,20 +121,22 @@ func TestValidateServiceInfo(t *testing.T) {
 			"empty": {DisplayName: ""},      // Invalid category
 		},
 		Resources: map[ResourceName]ResourceInfo{
-			"foo":         {Category: Some(CategoryName("empty"))}, // Topology is missing
-			"bar":         {Category: Some(CategoryName("valid")), Topology: "InvalidTopology"},
-			"baz":         {Category: Some(CategoryName("valid")), Topology: AZSeparatedTopology},
-			"foo+private": {Category: Some(CategoryName("valid")), Topology: FlatTopology},               // Invalid name
-			"qux1":        {Category: Some(CategoryName("")), Topology: FlatTopology},                    // Invalid category
-			"qux2":        {Category: Some(CategoryName("someUnknownCategory")), Topology: FlatTopology}, // Unknown category
+			"foo":         {Category: Some(CategoryName("empty")), Unit: UnitPiece}, // Topology is missing
+			"bar":         {Category: Some(CategoryName("valid")), Topology: "InvalidTopology", Unit: UnitPiece},
+			"baz":         {Category: Some(CategoryName("valid")), Topology: AZSeparatedTopology, Unit: UnitPiece},
+			"foo+private": {Category: Some(CategoryName("valid")), Topology: FlatTopology, Unit: UnitPiece},               // Invalid name
+			"qux1":        {Category: Some(CategoryName("")), Topology: FlatTopology, Unit: UnitPiece},                    // Invalid category
+			"qux2":        {Category: Some(CategoryName("someUnknownCategory")), Topology: FlatTopology, Unit: UnitPiece}, // Unknown category
+			"none":        {Category: None[CategoryName](), Topology: FlatTopology},                                       // Invalid unit
 		},
 		Rates: map[RateName]RateInfo{
-			"corge":      {Category: Some(CategoryName("empty")), HasUsage: true}, // Topology is missing
-			"grault":     {Category: Some(CategoryName("valid")), HasUsage: true, Topology: "InvalidTopology"},
-			"waldo":      {Category: Some(CategoryName("valid")), HasUsage: true, Topology: AZSeparatedTopology},
-			"foo/create": {Category: Some(CategoryName("valid")), HasUsage: true, Topology: FlatTopology},               // Invalid name
-			"bla1":       {Category: Some(CategoryName("")), HasUsage: true, Topology: FlatTopology},                    // Invalid category
-			"bla2":       {Category: Some(CategoryName("someUnknownCategory")), HasUsage: true, Topology: FlatTopology}, // Unknown category
+			"corge":      {Category: Some(CategoryName("empty")), HasUsage: true, Unit: UnitPiece}, // Topology is missing
+			"grault":     {Category: Some(CategoryName("valid")), HasUsage: true, Topology: "InvalidTopology", Unit: UnitPiece},
+			"waldo":      {Category: Some(CategoryName("valid")), HasUsage: true, Topology: AZSeparatedTopology, Unit: UnitPiece},
+			"foo/create": {Category: Some(CategoryName("valid")), HasUsage: true, Topology: FlatTopology, Unit: UnitPiece},               // Invalid name
+			"bla1":       {Category: Some(CategoryName("")), HasUsage: true, Topology: FlatTopology, Unit: UnitPiece},                    // Invalid category
+			"bla2":       {Category: Some(CategoryName("someUnknownCategory")), HasUsage: true, Topology: FlatTopology, Unit: UnitPiece}, // Unknown category
+			"none":       {Category: None[CategoryName](), HasUsage: true, Topology: FlatTopology},                                       // Invalid unit
 		},
 	}
 	expectedErrStrings := []string{
@@ -146,8 +148,10 @@ func TestValidateServiceInfo(t *testing.T) {
 		`.Rates["foo/create"] has invalid name (must match /^[a-zA-Z][a-zA-Z0-9._-]*$/)`,
 		`.Resources["qux1"] has invalid category ""`,
 		`.Resources["qux2"] has category "someUnknownCategory", which is not declared in .Categories`,
+		`.Resources["none"] uses invalid unit "" (in your code, replace liquid.UnitNone with liquid.UnitPiece)`,
 		`.Rates["bla1"] has invalid category ""`,
 		`.Rates["bla2"] has category "someUnknownCategory", which is not declared in .Categories`,
+		`.Rates["none"] uses invalid unit "" (in your code, replace liquid.UnitNone with liquid.UnitPiece)`,
 		`.Categories[""] has invalid identifier`,
 		`.Categories["extra"] is not referenced by any resource or rate`,
 		`.Categories["empty"] has invalid DisplayName`,
