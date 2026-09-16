@@ -95,7 +95,7 @@ type ResourceCommitmentChangeset struct {
 	TotalConfirmedBefore uint64 `json:"totalConfirmedBefore"`
 	TotalConfirmedAfter  uint64 `json:"totalConfirmedAfter"`
 
-	// Same as above, but for commitments in CommitmentStatusGuaranteed.
+	// Refers to a commitment status that is not used anymore. Limes will always report 0 in these fields for backwards compatibility.
 	TotalGuaranteedBefore uint64 `json:"totalGuaranteedBefore"`
 	TotalGuaranteedAfter  uint64 `json:"totalGuaranteedAfter"`
 
@@ -154,8 +154,7 @@ func (c Commitment) Clone() Commitment {
 // CommitmentStatus is an enum containing the various lifecycle states of type [Commitment].
 // The following state transitions are allowed:
 //
-//	start = "planned" -> "pending" -> "confirmed"   // normal commitment that takes effect after the ConfirmBy date
-//	start = "guaranteed" -> "confirmed"             // pre-confirmed commitment that takes effect at the ConfirmBy date
+//	start = "planned" -> "pending" -> "confirmed"   // commitment that takes effect after the ConfirmBy date
 //	start = "confirmed"                             // commitment that takes effect right away (ConfirmBy = nil)
 //	anyNonFinal -> "expired" = final                // commitment stops taking effect after ExpiresAt
 //	anyNonFinal -> "superseded" = final             // commitment stops taking effect if replaced by other commitments
@@ -169,11 +168,6 @@ const (
 	// CommitmentStatusPending means that the commitment has a ConfirmBy date in the past, but the cloud has not confirmed it yet.
 	// Pending commitments usually only stick around when there is not enough capacity to cover all current resource demands.
 	CommitmentStatusPending CommitmentStatus = "pending"
-	// CommitmentStatusGuaranteed means that the commitment has a ConfirmBy date in the future.
-	// Similar to CommitmentStatusPlanned, this type of commitment notifies the cloud about future resource demand.
-	// But unlike CommitmentStatusPlanned, the cloud has already committed to honoring this demand in the future.
-	// Upon the passing of the ConfirmBy date, the commitment will certainly and immediately move into CommitmentStatusConfirmed.
-	CommitmentStatusGuaranteed CommitmentStatus = "guaranteed"
 	// CommitmentStatusConfirmed means that the commitment has been confirmed and is being honored by the cloud.
 	// Confirmed commitments represent current resource demand that the cloud is able to guarantee.
 	CommitmentStatusConfirmed CommitmentStatus = "confirmed"
@@ -188,7 +182,7 @@ const (
 // IsValid returns whether the given status is one of the predefined enum variants.
 func (s CommitmentStatus) IsValid() bool {
 	switch s {
-	case CommitmentStatusPlanned, CommitmentStatusPending, CommitmentStatusGuaranteed, CommitmentStatusConfirmed, CommitmentStatusSuperseded, CommitmentStatusExpired:
+	case CommitmentStatusPlanned, CommitmentStatusPending, CommitmentStatusConfirmed, CommitmentStatusSuperseded, CommitmentStatusExpired:
 		return true
 	default:
 		return false
@@ -198,52 +192,40 @@ func (s CommitmentStatus) IsValid() bool {
 // RequiresConfirmation describes if this request requires confirmation from the liquid.
 // The RejectionReason in type [CommitmentChangeResponse] may only be used if this returns true.
 //
-// Examples for RequiresConfirmation = true include commitments moving into or spawning in the "guaranteed" or "confirmed" statuses, or conversion of commitments between resources.
+// Examples for RequiresConfirmation = true include commitments moving into or spawning in the "confirmed" status, or conversion of commitments between resources.
 // Examples for RequiresConfirmation = false include commitments being split, moving into the "expired" status or being hard deleted.
 func (req CommitmentChangeRequest) RequiresConfirmation() bool {
 	// the request requires confirmation if any one ResourceCommitmentChangeset does
 	for _, pc := range req.ByProject {
 		for _, rc := range pc.ByResource {
 			// the only case which requires confirmation when the totals do not change is when a commitments expiresAt
-			// changes and it was confirmed or guaranteed before.
+			// changes and it was confirmed before.
 			for _, c := range rc.Commitments {
-				if (c.NewStatus == Some(CommitmentStatusConfirmed) || c.NewStatus == Some(CommitmentStatusGuaranteed)) && c.OldExpiresAt.IsSome() {
+				if c.NewStatus == Some(CommitmentStatusConfirmed) && c.OldExpiresAt.IsSome() {
 					return true
 				}
 			}
 
 			// if the relevant totals do not change, no confirmation is required
-			if rc.TotalConfirmedBefore == rc.TotalConfirmedAfter && rc.TotalGuaranteedBefore == rc.TotalGuaranteedAfter {
+			if rc.TotalConfirmedBefore == rc.TotalConfirmedAfter {
 				continue
 			}
 
 			// otherwise, confirmation is required except if the changes can be explained by the following types of status changes:
-			//   - guaranteed/confirmed -> expired (based on a pre-determined schedule that was known at confirmation time)
-			//   - guaranteed -> confirmed (the former includes an implicit approval for moving into the latter at ConfirmBy)
+			//   - confirmed -> expired (based on a pre-determined schedule that was known at confirmation time)
 			var (
 				// NOTE: This algorithm is purposefully written to never use subtractions.
 				// If the totals values provided in the request are incorrect, subtractions could overflow below zero.
 				// Additions, on the other hand, should always be fine unless any commitment amount or totals value is extremely large
 				// (which realistically would only occur as the result of a previous uint64 overflow).
-				expectedGuaranteedReduction uint64 = 0
-				expectedConfirmedReduction  uint64 = 0
-				expectedConfirmedIncrease   uint64 = 0
+				expectedConfirmedReduction uint64 = 0
 			)
 			for _, c := range rc.Commitments {
-				switch {
-				case c.OldStatus == Some(CommitmentStatusConfirmed) && (c.NewStatus == Some(CommitmentStatusExpired) || c.NewStatus == None[CommitmentStatus]()):
+				if c.OldStatus == Some(CommitmentStatusConfirmed) && (c.NewStatus == Some(CommitmentStatusExpired) || c.NewStatus == None[CommitmentStatus]()) {
 					expectedConfirmedReduction += c.Amount
-				case c.OldStatus == Some(CommitmentStatusGuaranteed) && (c.NewStatus == Some(CommitmentStatusExpired) || c.NewStatus == None[CommitmentStatus]()):
-					expectedGuaranteedReduction += c.Amount
-				case c.OldStatus == Some(CommitmentStatusGuaranteed) && c.NewStatus == Some(CommitmentStatusConfirmed):
-					expectedGuaranteedReduction += c.Amount
-					expectedConfirmedIncrease += c.Amount
 				}
 			}
-			if rc.TotalConfirmedBefore+expectedConfirmedIncrease != rc.TotalConfirmedAfter+expectedConfirmedReduction {
-				return true
-			}
-			if rc.TotalGuaranteedBefore != rc.TotalGuaranteedAfter+expectedGuaranteedReduction {
+			if rc.TotalConfirmedBefore != rc.TotalConfirmedAfter+expectedConfirmedReduction {
 				return true
 			}
 		}

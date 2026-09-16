@@ -31,10 +31,8 @@ func TestCloneCommitmentChangeRequest(t *testing.T) {
 				}),
 				ByResource: map[ResourceName]ResourceCommitmentChangeset{
 					"things": {
-						TotalConfirmedBefore:  10,
-						TotalConfirmedAfter:   8,
-						TotalGuaranteedBefore: 5,
-						TotalGuaranteedAfter:  5,
+						TotalConfirmedBefore: 10,
+						TotalConfirmedAfter:  8,
 						Commitments: []Commitment{{
 							UUID:         "uuid-for-commitment",
 							OldStatus:    Some(CommitmentStatusConfirmed),
@@ -82,17 +80,9 @@ func TestCommitmentChangeRequestRequiresConfirmation(t *testing.T) {
 	allAliveStatuses := []CommitmentStatus{
 		CommitmentStatusPlanned,
 		CommitmentStatusPending,
-		CommitmentStatusGuaranteed,
 		CommitmentStatusConfirmed,
 		// "superseded" and "expired" are not here because those statuses do not allow further actions,
 		// so they cannot appear as the OldStatus of a commitment in a changeset
-	}
-	ifGuaranteed := func(status CommitmentStatus, value uint64) uint64 {
-		if status == CommitmentStatusGuaranteed {
-			return value
-		} else {
-			return 0
-		}
 	}
 	ifConfirmed := func(status CommitmentStatus, value uint64) uint64 {
 		if status == CommitmentStatusConfirmed {
@@ -114,10 +104,8 @@ func TestCommitmentChangeRequestRequiresConfirmation(t *testing.T) {
 		"proj-one": {
 			ByResource: map[ResourceName]ResourceCommitmentChangeset{
 				"capacity": {
-					TotalConfirmedBefore:  50,
-					TotalConfirmedAfter:   50,
-					TotalGuaranteedBefore: 15,
-					TotalGuaranteedAfter:  15,
+					TotalConfirmedBefore: 50,
+					TotalConfirmedAfter:  50,
 					Commitments: []Commitment{{
 						UUID:      dummyUUID1,
 						NewStatus: Some(CommitmentStatusPlanned),
@@ -136,10 +124,8 @@ func TestCommitmentChangeRequestRequiresConfirmation(t *testing.T) {
 		"proj-one": {
 			ByResource: map[ResourceName]ResourceCommitmentChangeset{
 				"capacity": {
-					TotalConfirmedBefore:  50,
-					TotalConfirmedAfter:   60,
-					TotalGuaranteedBefore: 15,
-					TotalGuaranteedAfter:  15,
+					TotalConfirmedBefore: 50,
+					TotalConfirmedAfter:  60,
 					Commitments: []Commitment{{
 						UUID:      dummyUUID1,
 						NewStatus: Some(CommitmentStatusConfirmed),
@@ -157,10 +143,8 @@ func TestCommitmentChangeRequestRequiresConfirmation(t *testing.T) {
 		"proj-one": {
 			ByResource: map[ResourceName]ResourceCommitmentChangeset{
 				"capacity": {
-					TotalConfirmedBefore:  50,
-					TotalConfirmedAfter:   50,
-					TotalGuaranteedBefore: 15,
-					TotalGuaranteedAfter:  15,
+					TotalConfirmedBefore: 50,
+					TotalConfirmedAfter:  50,
 					Commitments: []Commitment{{
 						UUID:      dummyUUID1,
 						OldStatus: Some(CommitmentStatusPlanned),
@@ -199,51 +183,6 @@ func TestCommitmentChangeRequestRequiresConfirmation(t *testing.T) {
 		assert.Equal(t, c.RequiresConfirmation(), true)
 	}
 
-	// creating a commitment in "guaranteed" DOES require confirmation...
-	c = makeRequest(map[ProjectUUID]ProjectCommitmentChangeset{
-		"proj-one": {
-			ByResource: map[ResourceName]ResourceCommitmentChangeset{
-				"capacity": {
-					TotalConfirmedBefore:  50,
-					TotalConfirmedAfter:   50,
-					TotalGuaranteedBefore: 15,
-					TotalGuaranteedAfter:  25,
-					Commitments: []Commitment{{
-						UUID:      dummyUUID1,
-						NewStatus: Some(CommitmentStatusGuaranteed),
-						Amount:    10,
-						ConfirmBy: Some(dummyNow.Add(1 * time.Hour)),
-						ExpiresAt: dummyNow.Add(24 * time.Hour),
-					}},
-				},
-			},
-		},
-	})
-	assert.Equal(t, c.RequiresConfirmation(), true)
-
-	// ...but then moving it into "confirmed" later DOES NOT require additional confirmation
-	c = makeRequest(map[ProjectUUID]ProjectCommitmentChangeset{
-		"proj-one": {
-			ByResource: map[ResourceName]ResourceCommitmentChangeset{
-				"capacity": {
-					TotalConfirmedBefore:  50,
-					TotalConfirmedAfter:   60,
-					TotalGuaranteedBefore: 25,
-					TotalGuaranteedAfter:  15,
-					Commitments: []Commitment{{
-						UUID:      dummyUUID1,
-						OldStatus: Some(CommitmentStatusGuaranteed),
-						NewStatus: Some(CommitmentStatusConfirmed),
-						Amount:    10,
-						ConfirmBy: Some(dummyNow),
-						ExpiresAt: dummyNow.Add(24 * time.Hour),
-					}},
-				},
-			},
-		},
-	})
-	assert.Equal(t, c.RequiresConfirmation(), false)
-
 	// splitting a commitment DOES NOT require confirmation, regardless of status
 	for _, status := range allAliveStatuses {
 		c = makeRequest(map[ProjectUUID]ProjectCommitmentChangeset{
@@ -281,7 +220,7 @@ func TestCommitmentChangeRequestRequiresConfirmation(t *testing.T) {
 		assert.Equal(t, c.RequiresConfirmation(), false)
 	}
 
-	// moving a commitment from one project to another requires confirmation only in status "guaranteed" or "confirmed"
+	// moving a commitment from one project to another requires confirmation only in status "confirmed"
 	// (in those statuses, the underlying reservation may be tied to existing usage or specific properties of the source project,
 	// so there could not be enough space for a reservation on the target project)
 	for _, status := range allAliveStatuses {
@@ -289,10 +228,8 @@ func TestCommitmentChangeRequestRequiresConfirmation(t *testing.T) {
 			"proj-one": {
 				ByResource: map[ResourceName]ResourceCommitmentChangeset{
 					"capacity": {
-						TotalConfirmedBefore:  50 + ifConfirmed(status, 10),
-						TotalConfirmedAfter:   50,
-						TotalGuaranteedBefore: 15 + ifGuaranteed(status, 10),
-						TotalGuaranteedAfter:  15,
+						TotalConfirmedBefore: 50 + ifConfirmed(status, 10),
+						TotalConfirmedAfter:  50,
 						Commitments: []Commitment{{
 							UUID:      dummyUUID1,
 							OldStatus: Some(status),
@@ -305,10 +242,8 @@ func TestCommitmentChangeRequestRequiresConfirmation(t *testing.T) {
 			"proj-two": {
 				ByResource: map[ResourceName]ResourceCommitmentChangeset{
 					"capacity": {
-						TotalConfirmedBefore:  25,
-						TotalConfirmedAfter:   25 + ifConfirmed(status, 10),
-						TotalGuaranteedBefore: 5,
-						TotalGuaranteedAfter:  5 + ifGuaranteed(status, 10),
+						TotalConfirmedBefore: 25,
+						TotalConfirmedAfter:  25 + ifConfirmed(status, 10),
 						Commitments: []Commitment{{
 							UUID:      dummyUUID1,
 							NewStatus: Some(status),
@@ -320,10 +255,10 @@ func TestCommitmentChangeRequestRequiresConfirmation(t *testing.T) {
 			},
 		})
 		t.Logf("checking move in status %q", status)
-		assert.Equal(t, c.RequiresConfirmation(), status == CommitmentStatusGuaranteed || status == CommitmentStatusConfirmed)
+		assert.Equal(t, c.RequiresConfirmation(), status == CommitmentStatusConfirmed)
 	}
 
-	// converting a commitment between compatible resources requires confirmation only in status "guaranteed" or "confirmed"
+	// converting a commitment between compatible resources requires confirmation only in status "confirmed"
 	// (in those statuses, the underlying reservation may be tied to existing usage or specific properties of the old resource,
 	// so there could not be enough space for a reservation on the new resource)
 	for _, status := range allAliveStatuses {
@@ -331,10 +266,8 @@ func TestCommitmentChangeRequestRequiresConfirmation(t *testing.T) {
 			"proj-one": {
 				ByResource: map[ResourceName]ResourceCommitmentChangeset{
 					"capacity-dense": {
-						TotalConfirmedBefore:  50 + ifConfirmed(status, 10),
-						TotalConfirmedAfter:   50,
-						TotalGuaranteedBefore: 15 + ifGuaranteed(status, 10),
-						TotalGuaranteedAfter:  15,
+						TotalConfirmedBefore: 50 + ifConfirmed(status, 10),
+						TotalConfirmedAfter:  50,
 						Commitments: []Commitment{{
 							UUID:      dummyUUID1,
 							OldStatus: Some(status),
@@ -344,10 +277,8 @@ func TestCommitmentChangeRequestRequiresConfirmation(t *testing.T) {
 						}},
 					},
 					"capacity-sparse": {
-						TotalConfirmedBefore:  25,
-						TotalConfirmedAfter:   25 + ifConfirmed(status, 20),
-						TotalGuaranteedBefore: 5,
-						TotalGuaranteedAfter:  5 + ifGuaranteed(status, 20),
+						TotalConfirmedBefore: 25,
+						TotalConfirmedAfter:  25 + ifConfirmed(status, 20),
 						Commitments: []Commitment{{
 							UUID:      dummyUUID2,
 							NewStatus: Some(status),
@@ -359,20 +290,18 @@ func TestCommitmentChangeRequestRequiresConfirmation(t *testing.T) {
 			},
 		})
 		t.Logf("checking conversion in status %q", status)
-		assert.Equal(t, c.RequiresConfirmation(), status == CommitmentStatusGuaranteed || status == CommitmentStatusConfirmed)
+		assert.Equal(t, c.RequiresConfirmation(), status == CommitmentStatusConfirmed)
 	}
 
 	// transitioning into status "expired" is the only type of change to the relevant totals numbers
-	// that does not require confirmation - except from hard deletions
+	// that does not require confirmation
 	for _, status := range allAliveStatuses {
 		c = makeRequest(map[ProjectUUID]ProjectCommitmentChangeset{
 			"proj-one": {
 				ByResource: map[ResourceName]ResourceCommitmentChangeset{
 					"capacity-dense": {
-						TotalConfirmedBefore:  50 + ifConfirmed(status, 10),
-						TotalConfirmedAfter:   50,
-						TotalGuaranteedBefore: 15 + ifGuaranteed(status, 10),
-						TotalGuaranteedAfter:  15,
+						TotalConfirmedBefore: 50 + ifConfirmed(status, 10),
+						TotalConfirmedAfter:  50,
 						Commitments: []Commitment{{
 							UUID:      dummyUUID1,
 							OldStatus: Some(status),
@@ -394,10 +323,8 @@ func TestCommitmentChangeRequestRequiresConfirmation(t *testing.T) {
 			"proj-one": {
 				ByResource: map[ResourceName]ResourceCommitmentChangeset{
 					"capacity-dense": {
-						TotalConfirmedBefore:  50 + ifConfirmed(status, 10),
-						TotalConfirmedAfter:   50,
-						TotalGuaranteedBefore: 15 + ifGuaranteed(status, 10),
-						TotalGuaranteedAfter:  15,
+						TotalConfirmedBefore: 50 + ifConfirmed(status, 10),
+						TotalConfirmedAfter:  50,
 						Commitments: []Commitment{{
 							UUID:      dummyUUID1,
 							OldStatus: Some(status),
@@ -412,16 +339,14 @@ func TestCommitmentChangeRequestRequiresConfirmation(t *testing.T) {
 		assert.Equal(t, c.RequiresConfirmation(), false)
 	}
 
-	// change of expiration date requires confirmation when already in StatusConfirmed or StatusGuaranteed
+	// change of expiration date requires confirmation when already in StatusConfirmed
 	for _, status := range allAliveStatuses {
 		c = makeRequest(map[ProjectUUID]ProjectCommitmentChangeset{
 			"proj-one": {
 				ByResource: map[ResourceName]ResourceCommitmentChangeset{
 					"capacity-dense": {
-						TotalConfirmedBefore:  50,
-						TotalConfirmedAfter:   50,
-						TotalGuaranteedBefore: 15,
-						TotalGuaranteedAfter:  15,
+						TotalConfirmedBefore: 50,
+						TotalConfirmedAfter:  50,
 						Commitments: []Commitment{{
 							UUID:         dummyUUID1,
 							OldStatus:    Some(status),
@@ -435,6 +360,6 @@ func TestCommitmentChangeRequestRequiresConfirmation(t *testing.T) {
 			},
 		})
 		t.Logf("checking expiresAt extension in status %q", status)
-		assert.Equal(t, c.RequiresConfirmation(), status == CommitmentStatusConfirmed || status == CommitmentStatusGuaranteed)
+		assert.Equal(t, c.RequiresConfirmation(), status == CommitmentStatusConfirmed)
 	}
 }
