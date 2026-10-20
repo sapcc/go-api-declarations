@@ -5,7 +5,8 @@
 //
 // [Limes] expects OpenStack services to expose this interface either natively or through an adapter.
 // The interface allows Limes to retrieve quota and usage data, and optionally capacity data, from the respective OpenStack service.
-// Limes will also use the interface to set quota within the service.
+// Limes will also use the interface to set quota within the service,
+// and to present commitment change requests for approval (if requested by the service).
 //
 // # Naming conventions
 //
