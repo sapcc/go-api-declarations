@@ -113,7 +113,7 @@ func TestOptParserHappyPaths(t *testing.T) {
 
 	// embedded string
 	checkParsingHappyPath(t, "embedded_string", "?embedded_string=hello",
-		testOpts{EmbeddedOpts: EmbeddedOpts{EmbeddedString: "hello"}})
+		testOpts{EmbeddedString: "hello"})
 
 	// map
 	checkParsingHappyPath(t, "string_map", "?string_map=k1:v1&string_map=k2:v2",

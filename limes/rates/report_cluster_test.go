@@ -9,7 +9,6 @@ import (
 	"go.xyrillian.de/gg/assert"
 
 	th "github.com/sapcc/go-api-declarations/internal/testhelper"
-	"github.com/sapcc/go-api-declarations/limes"
 )
 
 var clusterServicesOnlyRatesMockJSON = `
@@ -30,10 +29,8 @@ var clusterServicesOnlyRatesMockJSON = `
 
 var clusterServicesOnlyRates = &ClusterServiceReports{
 	"compute": &ClusterServiceReport{
-		ServiceInfo: limes.ServiceInfo{
-			Type: "compute",
-			Area: "compute",
-		},
+		Type: "compute",
+		Area: "compute",
 		Rates: ClusterRateReports{
 			"service/shared/objects:create": {
 				RateInfo: RateInfo{Name: "service/shared/objects:create"},

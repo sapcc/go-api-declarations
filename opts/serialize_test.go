@@ -35,7 +35,7 @@ func TestBuildQueryStringHappyPaths(t *testing.T) {
 	checkSerializingHappyPath(t, "empty", testOpts{}, "")
 
 	// embedded string
-	checkSerializingHappyPath(t, "embedded_string", testOpts{EmbeddedOpts: EmbeddedOpts{EmbeddedString: "hello"}}, "embedded_string=hello")
+	checkSerializingHappyPath(t, "embedded_string", testOpts{EmbeddedString: "hello"}, "embedded_string=hello")
 
 	// map
 	checkSerializingHappyPath(t, "string_map", testOpts{StringMap: map[string]string{"k1": "v1", "k2": "v2"}}, "string_map=k1%3Av1&string_map=k2%3Av2")

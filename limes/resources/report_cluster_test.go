@@ -102,9 +102,7 @@ var clusterResourcesMockJSON = `
 
 var clusterMockResources = &ClusterResourceReports{
 	"cores": &ClusterResourceReport{
-		ResourceInfo: ResourceInfo{
-			Name: "cores",
-		},
+		Name:     "cores",
 		Capacity: &coresCap,
 		PerAZ: map[limes.AvailabilityZone]*ClusterAZResourceReport{
 			"az-one": {
@@ -132,10 +130,8 @@ var clusterMockResources = &ClusterResourceReports{
 		Usage:        100,
 	},
 	"ram": &ClusterResourceReport{
-		ResourceInfo: ResourceInfo{
-			Name: "ram",
-			Unit: limes.UnitMebibytes,
-		},
+		Name:         "ram",
+		Unit:         limes.UnitMebibytes,
 		Capacity:     &ramCap,
 		DomainsQuota: new(uint64(102400)),
 		Usage:        40800,
@@ -147,10 +143,8 @@ var ramCap uint64 = 204800
 
 var clusterMockServices = &ClusterServiceReports{
 	"compute": &ClusterServiceReport{
-		ServiceInfo: limes.ServiceInfo{
-			Type: "compute",
-			Area: "compute",
-		},
+		Type:         "compute",
+		Area:         "compute",
 		Resources:    *clusterMockResources,
 		MaxScrapedAt: p2time(1539024049),
 		MinScrapedAt: p2time(1539023764),

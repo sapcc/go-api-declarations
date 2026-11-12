@@ -58,18 +58,14 @@ var domainResourcesMockJSON = `
 
 var domainMockResources = &DomainResourceReports{
 	"cores": &DomainResourceReport{
-		ResourceInfo: ResourceInfo{
-			Name: "cores",
-		},
+		Name:          "cores",
 		DomainQuota:   new(uint64(50)),
 		ProjectsQuota: new(uint64(20)),
 		Usage:         10,
 	},
 	"ram": &DomainResourceReport{
-		ResourceInfo: ResourceInfo{
-			Name: "ram",
-			Unit: limes.UnitMebibytes,
-		},
+		Name:          "ram",
+		Unit:          limes.UnitMebibytes,
 		DomainQuota:   new(uint64(20480)),
 		ProjectsQuota: new(uint64(10240)),
 		Usage:         4080,
@@ -78,10 +74,8 @@ var domainMockResources = &DomainResourceReports{
 
 var domainMockServices = &DomainServiceReports{
 	"compute": &DomainServiceReport{
-		ServiceInfo: limes.ServiceInfo{
-			Type: "compute",
-			Area: "compute",
-		},
+		Type:         "compute",
+		Area:         "compute",
 		Resources:    *domainMockResources,
 		MaxScrapedAt: p2time(1538955269),
 		MinScrapedAt: p2time(1538955116),

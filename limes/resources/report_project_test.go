@@ -94,10 +94,8 @@ var projectResourcesMockJSON = `
 
 var projectMockResources = &ProjectResourceReports{
 	"capacity": &ProjectResourceReport{
-		ResourceInfo: ResourceInfo{
-			Name: "capacity",
-			Unit: limes.UnitBytes,
-		},
+		Name: "capacity",
+		Unit: limes.UnitBytes,
 		PerAZ: ProjectAZResourceReports{
 			"az-one": {Quota: new(uint64(6)), Usage: 2, Committed: map[string]uint64{"1 year": 3}},
 			"az-two": {Quota: new(uint64(4)), Usage: 0},
@@ -107,9 +105,7 @@ var projectMockResources = &ProjectResourceReports{
 		Usage:       2,
 	},
 	"things": &ProjectResourceReport{
-		ResourceInfo: ResourceInfo{
-			Name: "things",
-		},
+		Name: "things",
 		PerAZ: ProjectAZResourceReports{
 			limes.AvailabilityZoneAny: {Usage: 2},
 		},
@@ -121,10 +117,8 @@ var projectMockResources = &ProjectResourceReports{
 
 var projectMockServices = &ProjectServiceReports{
 	"shared": &ProjectServiceReport{
-		ServiceInfo: limes.ServiceInfo{
-			Type: "shared",
-			Area: "shared",
-		},
+		Type:      "shared",
+		Area:      "shared",
 		Resources: *projectMockResources,
 		ScrapedAt: p2time(22),
 	},

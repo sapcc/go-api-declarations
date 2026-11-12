@@ -75,10 +75,8 @@ var projectServicesRateLimitDeviatingFromDefaultsMockJSON = `
 
 var projectMockServicesRateLimit = &ProjectServiceReports{
 	"shared": &ProjectServiceReport{
-		ServiceInfo: limes.ServiceInfo{
-			Type: "shared",
-			Area: "shared",
-		},
+		Type: "shared",
+		Area: "shared",
 		Rates: ProjectRateReports{
 			"services/swift/account/container/object:create": {
 				RateInfo: RateInfo{Name: "services/swift/account/container/object:create"},
@@ -102,10 +100,8 @@ var projectMockServicesRateLimit = &ProjectServiceReports{
 
 var projectMockServicesRateLimitDeviatingFromDefaults = &ProjectServiceReports{
 	"shared": &ProjectServiceReport{
-		ServiceInfo: limes.ServiceInfo{
-			Type: "shared",
-			Area: "shared",
-		},
+		Type: "shared",
+		Area: "shared",
 		Rates: ProjectRateReports{
 			"services/swift/account/container/object:create": {
 				RateInfo:      RateInfo{Name: "services/swift/account/container/object:create"},
