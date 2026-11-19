@@ -20,23 +20,22 @@ type Event struct {
 	RecordedAt *time.Time         `json:"recorded_at"`
 	GitRepos   map[string]GitRepo `json:"git,omitempty"`
 	// Exactly one of the following fields must be filled.
-	Pipeline   *Pipeline         `json:"pipeline,omitempty"`
-	Greenhouse *GreenhousePlugin `json:"greenhouse,omitempty"`
-	MCP        *MCP              `json:"mcp,omitempty"`
+	Pipeline         *Pipeline         `json:"pipeline,omitempty"`
+	GreenhousePlugin *GreenhousePlugin `json:"greenhouse_plugin,omitempty"`
+	MCP              *MCP              `json:"mcp,omitempty"`
 	// Exactly one of the following fields must be filled.
-	HelmReleases           []*HelmRelease             `json:"helm-release,omitempty"`
-	TerraformRuns          []*TerraformRun            `json:"terraform-runs,omitempty"`
-	ADDeployment           *ActiveDirectoryDeployment `json:"active-directory-deployment,omitempty"`
-	VolumeMigration        *VolumeMigration           `json:"volume_migration,omitempty"`
-	GreenhousePluginUpdate *GreenhousePlugin          `json:"greenhouse_plugin_update,omitempty"`
+	HelmReleases    []*HelmRelease             `json:"helm-release,omitempty"`
+	TerraformRuns   []*TerraformRun            `json:"terraform-runs,omitempty"`
+	ADDeployment    *ActiveDirectoryDeployment `json:"active-directory-deployment,omitempty"`
+	VolumeMigration *VolumeMigration           `json:"volume_migration,omitempty"`
 }
 
 // GitRepo appears in type Event. It describes the state of a Git repository
 // that was checked out for a specific deployment.
 type GitRepo struct {
+	AuthoredAt  *time.Time `json:"authored-at,omitempty"`
 	Branch      string     `json:"branch"`
-	AuthoredAt  *time.Time `json:"authored-at"`
-	CommittedAt *time.Time `json:"committed-at"`
+	CommittedAt *time.Time `json:"committed-at,omitempty"`
 	CommitID    string     `json:"commit-id"`
 	RemoteURL   string     `json:"remote-url"`
 }
@@ -108,22 +107,22 @@ type ActiveDirectoryDeployment struct {
 // VolumeMigration appears in type Event. It describes a Migration of virtual storage
 // volume from one physical hardware to another.
 type VolumeMigration struct {
-	Outcome         Outcome         `json:"outcome"`
-	Summary         string          `json:"summary"`
-	Service         string          `json:"service"`
-	Volume          string          `json:"volume"`
-	SourceCluster   StorageCluster  `json:"source_cluster"`
-	TargetCluster   StorageCluster  `json:"target_cluster"`
-	StartedAt       time.Time       `json:"started_at"`
-	FinishedAt      time.Time       `json:"finished_at"`
-	Execution       ExecutionParams `json:"execution"`
-	RelatedIncident string          `json:"related_incident"`
-	Requester       User            `json:"requester"`
-	Assessment      json.RawMessage `json:"assessment"`
+	Outcome         Outcome             `json:"outcome"`
+	Summary         string              `json:"summary"`
+	Service         string              `json:"service"`
+	Volume          string              `json:"volume"`
+	SourceCluster   StorageCluster      `json:"source_cluster"`
+	TargetCluster   StorageCluster      `json:"target_cluster"`
+	StartedAt       time.Time           `json:"started_at"`
+	FinishedAt      time.Time           `json:"finished_at"`
+	Execution       ExecutionParams     `json:"execution"`
+	RelatedIncident string              `json:"related_incident"`
+	Requester       VolumeMigrationUser `json:"requester"`
+	Assessment      json.RawMessage     `json:"assessment"`
 }
 
-// User appears in type VolumeMigration.
-type User struct {
+// VolumeMigrationUser appears in type VolumeMigration.
+type VolumeMigrationUser struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
 }
@@ -136,29 +135,29 @@ type ExecutionParams struct {
 
 // StorageCluster appears in type VolumeMigration.
 type StorageCluster struct {
-	Name                  string        `json:"name"`
-	AvailabilityZone      string        `json:"availability_zone"`
-	Datacenter            string        `json:"datacenter"`
-	OverallUsedTib        float64       `json:"used_tib"`
-	ClusterAvgAggrUsedPct float64       `json:"cluster_avg_aggr_used_pct"`
-	Model                 string        `json:"model"`
-	HardwareState         string        `json:"hardware_state"`
-	SVMCount              int           `json:"svm_count"`
-	Nodes                 []StorageNode `json:"nodes"`
+	Name                               string        `json:"name"`
+	AvailabilityZone                   string        `json:"availability_zone"`
+	Datacenter                         string        `json:"datacenter"`
+	OverallUsedTiB                     float64       `json:"used_tib"`
+	ClusterAverageAggregateUsedPercent float64       `json:"cluster_avg_aggr_used_pct"`
+	Model                              string        `json:"model"`
+	HardwareState                      string        `json:"hardware_state"`
+	SVMCount                           int           `json:"svm_count"`
+	Nodes                              []StorageNode `json:"nodes"`
 }
 
 // StorageNode appears in type StorageCluster.
 type StorageNode struct {
-	Name             string  `json:"name"`
-	Aggregate        string  `json:"aggregate"`
-	AggrUsedPct      float64 `json:"aggr_used_pct"`
-	VolumeCount      int     `json:"volume_count"`
-	AvgCpuPct        float64 `json:"avg_cpu_pct"`
-	MaxCpuPct        float64 `json:"max_cpu_pct"`
-	AvgLatencyUs     int     `json:"avg_latency_us"`
-	MaxLatencyUs     int     `json:"max_latency_us"`
-	AvgThroughputMbS float64 `json:"avg_throughput_mb_s"`
-	MaxThroughputMbS float64 `json:"max_throughput_mb_s"`
+	Name                           string  `json:"name"`
+	Aggregate                      string  `json:"aggregate"`
+	AggregateUsedPercent           float64 `json:"aggr_used_pct"`
+	VolumeCount                    int     `json:"volume_count"`
+	AverageCPUUsedPercent          float64 `json:"avg_cpu_pct"`
+	MaxCPUUsedPercent              float64 `json:"max_cpu_pct"`
+	AverageLatencyMicroseconds     int     `json:"avg_latency_us"`
+	MaxLatencyMicroseconds         int     `json:"max_latency_us"`
+	AverageThroughputMbitPerSecond float64 `json:"avg_throughput_mb_s"`
+	MaxThroughputMbitPerSecond     float64 `json:"max_throughput_mb_s"`
 }
 
 // Outcome appears in type HelmRelease and TerraformRun. It describes the final
@@ -214,19 +213,19 @@ type Pipeline struct {
 	CreatedBy    string `json:"created-by"`
 }
 
-// GreenhousePlugin appears in type Event. It describes the Greenhouse plugin in which
+// GreenhousePlugin appears in type Event. It describes the Greenhouse plugin from which
 // the given deployment was performed.
 type GreenhousePlugin struct {
-	Org     string `json:"org"`
-	Name    string `json:"name"`
-	Version string `json:"version"`
-	OwnedBy string `json:"owned_by"`
+	OrganizationName string `json:"org"`
+	Name             string `json:"name"`
+	Version          string `json:"version"`
+	Owner            string `json:"owned_by"`
 }
 
-// MCP appear in type Event. It describes the MCP in which the given action was performed.
+// MCP appears in type Event. It describes the MCP in which the given action was performed.
 type MCP struct {
 	Channel   string `json:"channel"`
-	SessionId string `json:"session_id"`
+	SessionID string `json:"session_id"`
 }
 
 // CombinedOutcome merges the Outcome values of all Operations in this Event
