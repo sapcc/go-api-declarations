@@ -7,30 +7,35 @@
 package deployevent
 
 import (
+	"encoding/json"
 	"time"
 )
 
 // Event describes a deployment (i.e. install or upgrade) of one or more Helm releases.
 type Event struct {
-	//NOTE: "recorded_at" should be "recorded-at", and "helm-release" should be
+	// NOTE: "recorded_at" should be "recorded-at", and "helm-release" should be
 	// "helm-releases". The inconsistent naming needs to stay like this now for
 	// backwards compatibility.
 	Region     string             `json:"region"`
 	RecordedAt *time.Time         `json:"recorded_at"`
-	GitRepos   map[string]GitRepo `json:"git"`
-	Pipeline   Pipeline           `json:"pipeline"`
+	GitRepos   map[string]GitRepo `json:"git,omitempty"`
 	// Exactly one of the following fields must be filled.
-	HelmReleases  []*HelmRelease             `json:"helm-release,omitempty"`
-	TerraformRuns []*TerraformRun            `json:"terraform-runs,omitempty"`
-	ADDeployment  *ActiveDirectoryDeployment `json:"active-directory-deployment,omitempty"`
+	Pipeline         *Pipeline         `json:"pipeline,omitempty"`
+	GreenhousePlugin *GreenhousePlugin `json:"greenhouse_plugin,omitempty"`
+	MCP              *MCP              `json:"mcp,omitempty"`
+	// Exactly one of the following fields must be filled.
+	HelmReleases    []*HelmRelease             `json:"helm-release,omitempty"`
+	TerraformRuns   []*TerraformRun            `json:"terraform-runs,omitempty"`
+	ADDeployment    *ActiveDirectoryDeployment `json:"active-directory-deployment,omitempty"`
+	VolumeMigration *VolumeMigration           `json:"volume_migration,omitempty"`
 }
 
 // GitRepo appears in type Event. It describes the state of a Git repository
 // that was checked out for a specific deployment.
 type GitRepo struct {
-	AuthoredAt  *time.Time `json:"authored-at"`
+	AuthoredAt  *time.Time `json:"authored-at,omitempty"`
 	Branch      string     `json:"branch"`
-	CommittedAt *time.Time `json:"committed-at"`
+	CommittedAt *time.Time `json:"committed-at,omitempty"`
 	CommitID    string     `json:"commit-id"`
 	RemoteURL   string     `json:"remote-url"`
 }
@@ -99,6 +104,62 @@ type ActiveDirectoryDeployment struct {
 	DurationSeconds *uint64    `json:"duration,omitempty"`
 }
 
+// VolumeMigration appears in type Event. It describes a Migration of virtual storage
+// volume from one physical hardware to another.
+type VolumeMigration struct {
+	Outcome         Outcome             `json:"outcome"`
+	Summary         string              `json:"summary"`
+	Service         string              `json:"service"`
+	Volume          string              `json:"volume"`
+	SourceCluster   StorageCluster      `json:"source_cluster"`
+	TargetCluster   StorageCluster      `json:"target_cluster"`
+	StartedAt       time.Time           `json:"started_at"`
+	FinishedAt      time.Time           `json:"finished_at"`
+	Execution       ExecutionParams     `json:"execution"`
+	RelatedIncident string              `json:"related_incident"`
+	Requester       VolumeMigrationUser `json:"requester"`
+	Assessment      json.RawMessage     `json:"assessment"`
+}
+
+// VolumeMigrationUser appears in type VolumeMigration.
+type VolumeMigrationUser struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
+// ExecutionParams appears in type VolumeMigration.
+type ExecutionParams struct {
+	Method         string `json:"method"`
+	HumanInTheLoop bool   `json:"human_in_the_loop"`
+}
+
+// StorageCluster appears in type VolumeMigration.
+type StorageCluster struct {
+	Name                               string        `json:"name"`
+	AvailabilityZone                   string        `json:"availability_zone"`
+	Datacenter                         string        `json:"datacenter"`
+	OverallUsedTiB                     float64       `json:"used_tib"`
+	ClusterAverageAggregateUsedPercent float64       `json:"cluster_avg_aggr_used_pct"`
+	Model                              string        `json:"model"`
+	HardwareState                      string        `json:"hardware_state"`
+	SVMCount                           int           `json:"svm_count"`
+	Nodes                              []StorageNode `json:"nodes"`
+}
+
+// StorageNode appears in type StorageCluster.
+type StorageNode struct {
+	Name                           string  `json:"name"`
+	Aggregate                      string  `json:"aggregate"`
+	AggregateUsedPercent           float64 `json:"aggr_used_pct"`
+	VolumeCount                    int     `json:"volume_count"`
+	AverageCPUUsedPercent          float64 `json:"avg_cpu_pct"`
+	MaxCPUUsedPercent              float64 `json:"max_cpu_pct"`
+	AverageLatencyMicroseconds     int     `json:"avg_latency_us"`
+	MaxLatencyMicroseconds         int     `json:"max_latency_us"`
+	AverageThroughputMbitPerSecond float64 `json:"avg_throughput_mb_s"`
+	MaxThroughputMbitPerSecond     float64 `json:"max_throughput_mb_s"`
+}
+
 // Outcome appears in type HelmRelease and TerraformRun. It describes the final
 // state of a release.
 type Outcome string
@@ -109,6 +170,8 @@ const (
 	OutcomeNotDeployed Outcome = "not-deployed"
 	// OutcomeSucceeded describes a Helm release that succeeded.
 	OutcomeSucceeded Outcome = "succeeded"
+	// OutcomeVolumeMigrationFailed describes a volume migration that failed
+	OutcomeVolumeMigrationFailed Outcome = "volume-migration-failed"
 	// OutcomeTerraformRunFailed describes a terraform run that failed
 	OutcomeTerraformRunFailed Outcome = "terraform-run-failed"
 	// OutcomeHelmUpgradeFailed describes a Helm release that failed during
@@ -130,7 +193,7 @@ const (
 // Helm release.
 func (o Outcome) IsKnownInputValue() bool {
 	switch o {
-	case OutcomeNotDeployed, OutcomeSucceeded, OutcomeHelmUpgradeFailed, OutcomeE2ETestFailed, OutcomeTerraformRunFailed, OutcomeADDeploymentFailed:
+	case OutcomeNotDeployed, OutcomeSucceeded, OutcomeHelmUpgradeFailed, OutcomeE2ETestFailed, OutcomeTerraformRunFailed, OutcomeADDeploymentFailed, OutcomeVolumeMigrationFailed:
 		return true
 	case OutcomePartiallyDeployed:
 		return false // not acceptable on an individual release, can only appear as result of Event.CombinedOutcome()
@@ -150,7 +213,22 @@ type Pipeline struct {
 	CreatedBy    string `json:"created-by"`
 }
 
-// CombinedOutcome merges the Outcome values of all HelmReleases in this Event
+// GreenhousePlugin appears in type Event. It describes the Greenhouse plugin from which
+// the given deployment was performed.
+type GreenhousePlugin struct {
+	OrganizationName string `json:"org"`
+	Name             string `json:"name"`
+	Version          string `json:"version"`
+	Owner            string `json:"owned_by"`
+}
+
+// MCP appears in type Event. It describes the MCP in which the given action was performed.
+type MCP struct {
+	Channel   string `json:"channel"`
+	SessionID string `json:"session_id"`
+}
+
+// CombinedOutcome merges the Outcome values of all Operations in this Event
 // into a single summary value.
 func (event Event) CombinedOutcome() Outcome {
 	allOutcomes := make([]Outcome, 0, len(event.HelmReleases)+len(event.TerraformRuns))
@@ -163,12 +241,15 @@ func (event Event) CombinedOutcome() Outcome {
 	if event.ADDeployment != nil {
 		allOutcomes = append(allOutcomes, event.ADDeployment.Outcome)
 	}
+	if event.VolumeMigration != nil {
+		allOutcomes = append(allOutcomes, event.VolumeMigration.Outcome)
+	}
 
 	hasSucceeded := false
 	hasUndeployed := false
 	for _, outcome := range allOutcomes {
 		switch outcome {
-		case OutcomeHelmUpgradeFailed, OutcomeE2ETestFailed, OutcomeTerraformRunFailed, OutcomeADDeploymentFailed:
+		case OutcomeHelmUpgradeFailed, OutcomeE2ETestFailed, OutcomeTerraformRunFailed, OutcomeADDeploymentFailed, OutcomeVolumeMigrationFailed:
 			// specific failure forces the entire result to be that failure
 			return outcome
 		case OutcomeSucceeded:
