@@ -289,5 +289,11 @@ func (event Event) CombinedStartDate() *time.Time {
 			t = ad.StartedAt
 		}
 	}
+	if event.VolumeMigration != nil {
+		vm := *event.VolumeMigration
+		if t.After(vm.StartedAt) {
+			t = &vm.StartedAt
+		}
+	}
 	return t
 }
